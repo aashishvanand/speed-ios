@@ -109,6 +109,26 @@ final class CloudflareClient: @unchecked Sendable {
         }
         return locations
     }
+
+    /// GET /meta — richest single source of truth: the client's ISP name
+    /// (asOrganization, not available via headers or /cdn-cgi/trace) plus
+    /// the colo's own city/coordinates.
+    func fetchMetaInfo() async -> NetworkMeta {
+        let url = baseURL.appendingPathComponent("meta")
+        guard let (data, _) = try? await session.data(from: url),
+              let response = try? JSONDecoder().decode(MetaResponse.self, from: data) else {
+            return NetworkMeta()
+        }
+        return NetworkMeta(
+            colo: response.colo?.iata,
+            city: response.colo?.city,
+            country: response.country,
+            asn: response.asn.map(String.init),
+            ispName: response.asOrganization,
+            latitude: response.colo?.lat,
+            longitude: response.colo?.lon
+        )
+    }
 }
 
 struct ColoLocation: Decodable, Sendable {
@@ -117,4 +137,18 @@ struct ColoLocation: Decodable, Sendable {
     let lon: Double
     let cca2: String
     let city: String
+}
+
+private struct MetaResponse: Decodable {
+    let asn: Int?
+    let asOrganization: String?
+    let country: String?
+    let colo: MetaColo?
+}
+
+private struct MetaColo: Decodable {
+    let iata: String?
+    let lat: Double?
+    let lon: Double?
+    let city: String?
 }

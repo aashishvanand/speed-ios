@@ -76,7 +76,7 @@ struct SpeedTestView: View {
 
     private var heroCard: some View {
         ZStack {
-            ThroughputGraph(samples: heroSamples, color: heroGraphColor)
+            ThroughputGraph(samples: heroSamples, color: heroGraphColor, blurred: runner.phase == .finished)
                 .clipShape(.rect(cornerRadius: 32))
 
             VStack(spacing: 6) {
@@ -198,7 +198,7 @@ struct SpeedTestView: View {
     private func statChip(icon: String, label: String, value: String, samples: [Double] = [], graphColor: Color? = nil) -> some View {
         ZStack {
             if let graphColor, !samples.isEmpty {
-                ThroughputGraph(samples: samples, color: graphColor)
+                ThroughputGraph(samples: samples, color: graphColor, blurred: true)
                     .clipShape(.rect(cornerRadius: 20))
             }
 
@@ -273,15 +273,24 @@ struct SpeedTestView: View {
                     Divider()
                     infoRow(label: "Country", value: country)
                 }
-                if let asn = meta.asn {
+                if meta.ispName != nil || meta.asn != nil {
                     Divider()
-                    infoRow(label: "Your network", value: "AS\(asn)")
+                    infoRow(label: "Your network", value: networkText(meta))
                 }
                 if let ip = meta.clientIP {
                     Divider()
                     infoRow(label: "Your IP", value: ip)
                 }
             }
+        }
+    }
+
+    private func networkText(_ meta: NetworkMeta) -> String {
+        switch (meta.ispName, meta.asn) {
+        case let (isp?, asn?): return "\(isp) (AS\(asn))"
+        case let (isp?, nil): return isp
+        case let (nil, asn?): return "AS\(asn)"
+        case (nil, nil): return ""
         }
     }
 
@@ -382,6 +391,7 @@ struct SpeedTestView: View {
 private struct ThroughputGraph: View {
     let samples: [Double]
     let color: Color
+    var blurred: Bool = false
 
     var body: some View {
         Chart {
@@ -397,8 +407,8 @@ private struct ThroughputGraph: View {
                     .interpolationMethod(.catmullRom)
 
                 LineMark(x: .value("Tick", index), y: .value("Mbps", value))
-                    .foregroundStyle(color.opacity(0.85))
-                    .lineStyle(StrokeStyle(lineWidth: 2.5))
+                    .foregroundStyle(color.opacity(blurred ? 0.85 : 0.7))
+                    .lineStyle(StrokeStyle(lineWidth: blurred ? 2.5 : 2))
                     .interpolationMethod(.catmullRom)
             }
         }
@@ -406,7 +416,7 @@ private struct ThroughputGraph: View {
         .chartYAxis(.hidden)
         .chartYScale(domain: 0...max((samples.max() ?? 1) * 1.25, 1))
         .chartLegend(.hidden)
-        .blur(radius: 6)
+        .blur(radius: blurred ? 6 : 0)
         .animation(.easeOut(duration: 0.25), value: samples)
     }
 }
@@ -421,7 +431,7 @@ private struct ColoMapView: View {
     var body: some View {
         Map(
             initialPosition: .region(
-                MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 4, longitudeDelta: 4))
+                MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15))
             ),
             interactionModes: []
         ) {

@@ -6,15 +6,17 @@ public struct NetworkMeta: Sendable, Equatable {
     public var city: String?
     public var country: String?
     public var asn: String?
+    public var ispName: String?
     public var latitude: Double?
     public var longitude: Double?
 
-    public init(clientIP: String? = nil, colo: String? = nil, city: String? = nil, country: String? = nil, asn: String? = nil, latitude: Double? = nil, longitude: Double? = nil) {
+    public init(clientIP: String? = nil, colo: String? = nil, city: String? = nil, country: String? = nil, asn: String? = nil, ispName: String? = nil, latitude: Double? = nil, longitude: Double? = nil) {
         self.clientIP = clientIP
         self.colo = colo
         self.city = city
         self.country = country
         self.asn = asn
+        self.ispName = ispName
         self.latitude = latitude
         self.longitude = longitude
     }
@@ -29,6 +31,7 @@ public struct NetworkMeta: Sendable, Equatable {
         city = city ?? other.city
         country = country ?? other.country
         asn = asn ?? other.asn
+        ispName = ispName ?? other.ispName
         latitude = latitude ?? other.latitude
         longitude = longitude ?? other.longitude
     }

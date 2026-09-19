@@ -47,8 +47,10 @@ public final class SpeedTestRunner: ObservableObject {
         phase = .connecting
 
         async let locationsTask = client.fetchLocations()
+        async let metaInfoTask = client.fetchMetaInfo()
         let trace = await client.fetchTrace()
         meta.merge(trace)
+        meta.merge(await metaInfoTask)
         let locations = await locationsTask
         resolveColoLocation(locations: locations)
 
