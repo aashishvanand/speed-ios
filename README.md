@@ -10,8 +10,8 @@ Uses the public `speed.cloudflare.com` endpoints — no API key required.
   (talks to `/__down`, `/__up`, `/cdn-cgi/trace`), throughput/latency workers,
   and `SpeedTestRunner` (an `ObservableObject` orchestrating a full run).
 - `App/Shared` — SwiftUI views shared by both app targets.
-- `App/CFSpeedTest` — iOS/iPadOS app target (universal).
-- `App/CFSpeedTest-tvOS` — tvOS app target.
+- `App/CFSpeed` — iOS/iPadOS app target (universal).
+- `App/CFSpeed-tvOS` — tvOS app target.
 - `project.yml` — [XcodeGen](https://github.com/yonaskolb/XcodeGen) spec. The
   `.xcodeproj` is generated, not committed.
 
@@ -20,7 +20,7 @@ Uses the public `speed.cloudflare.com` endpoints — no API key required.
 ```bash
 brew install xcodegen
 xcodegen generate
-open CFSpeedTest.xcodeproj
+open CFSpeed.xcodeproj
 ```
 
 ## Testing

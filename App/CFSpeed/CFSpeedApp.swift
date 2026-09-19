@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct CFSpeedTestTVApp: App {
+struct CFSpeedApp: App {
     var body: some Scene {
         WindowGroup {
             SpeedTestView()
