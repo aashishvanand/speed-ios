@@ -1,8 +1,8 @@
 import Foundation
 
 /// Orchestrates a full Cloudflare speed test run: idle latency, download
-/// (with loaded latency), upload (with loaded latency). Emits progress via
-/// an AsyncStream so SwiftUI views can observe it directly.
+/// (with loaded latency), upload (with loaded latency). Publishes progress
+/// directly so SwiftUI views can observe it via @StateObject/@ObservedObject.
 @MainActor
 public final class SpeedTestRunner: ObservableObject {
     @Published public private(set) var phase: TestPhase = .idle
@@ -22,6 +22,7 @@ public final class SpeedTestRunner: ObservableObject {
     public func start() {
         cancel()
         result = nil
+        meta = NetworkMeta()
         downloadMbps = 0
         uploadMbps = 0
         latencyMs = 0
@@ -47,7 +48,9 @@ public final class SpeedTestRunner: ObservableObject {
         if Task.isCancelled { phase = .idle; return }
 
         phase = .download
-        async let downloadResult = runDownloadPhase(client: client, config: config) { [weak self] mbps, _ in
+        async let downloadResult = runDownloadPhase(client: client, config: config) { [weak self] meta in
+            Task { @MainActor in self?.meta.merge(meta) }
+        } onTick: { [weak self] mbps, _ in
             Task { @MainActor in self?.downloadMbps = mbps }
         }
         async let downloadLoadedLatency = runLoadedLatencyProbes(client: client, duration: config.downloadDuration) { [weak self] ms in
@@ -75,6 +78,7 @@ public final class SpeedTestRunner: ObservableObject {
             uploadLoadedLatency: ulLatency
         )
         result = finalResult
+        latencyMs = idleLatency.avgMs
         phase = .finished
     }
 }

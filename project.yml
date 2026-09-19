@@ -2,8 +2,8 @@ name: CFSpeed
 options:
   bundleIdPrefix: me.aashishvanand.speed
   deploymentTarget:
-    iOS: "16.0"
-    tvOS: "16.0"
+    iOS: "26.0"
+    tvOS: "26.0"
   createIntermediateGroups: true
 
 packages:

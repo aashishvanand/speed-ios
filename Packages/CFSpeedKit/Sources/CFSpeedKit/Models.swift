@@ -15,7 +15,7 @@ public struct NetworkMeta: Sendable, Equatable {
         self.asn = asn
     }
 
-    var isEmpty: Bool {
+    public var isEmpty: Bool {
         clientIP == nil && colo == nil && city == nil && country == nil && asn == nil
     }
 
@@ -92,6 +92,28 @@ public enum TestPhase: Sendable, Equatable {
     case failed(String)
 }
 
+public enum QualityGrade: String, Sendable, Equatable {
+    case great = "Great"
+    case good = "Good"
+    case fair = "Fair"
+    case poor = "Poor"
+}
+
+/// Rough per-use-case quality estimate derived from measured throughput and
+/// idle latency/jitter — directionally similar to, but not an exact copy of,
+/// Cloudflare's own "Network Quality Score" categories.
+public struct NetworkQuality: Sendable, Equatable {
+    public var videoStreaming: QualityGrade
+    public var onlineGaming: QualityGrade
+    public var videoChatting: QualityGrade
+
+    public init(download: Double, upload: Double, latencyMs: Double, jitterMs: Double) {
+        videoStreaming = download >= 25 ? .great : download >= 10 ? .good : download >= 3 ? .fair : .poor
+        onlineGaming = (latencyMs < 50 && jitterMs < 30) ? .great : (latencyMs < 100 && jitterMs < 50) ? .good : latencyMs < 200 ? .fair : .poor
+        videoChatting = (upload >= 3 && latencyMs < 150) ? .great : (upload >= 1 && latencyMs < 300) ? .good : upload >= 0.5 ? .fair : .poor
+    }
+}
+
 public struct TestResult: Sendable, Equatable {
     public var meta: NetworkMeta
     public var idleLatency: LatencySummary
@@ -99,6 +121,7 @@ public struct TestResult: Sendable, Equatable {
     public var downloadLoadedLatency: LatencySummary
     public var upload: ThroughputSummary
     public var uploadLoadedLatency: LatencySummary
+    public var quality: NetworkQuality
 
     public init(meta: NetworkMeta, idleLatency: LatencySummary, download: ThroughputSummary, downloadLoadedLatency: LatencySummary, upload: ThroughputSummary, uploadLoadedLatency: LatencySummary) {
         self.meta = meta
@@ -107,6 +130,12 @@ public struct TestResult: Sendable, Equatable {
         self.downloadLoadedLatency = downloadLoadedLatency
         self.upload = upload
         self.uploadLoadedLatency = uploadLoadedLatency
+        self.quality = NetworkQuality(
+            download: download.meanMbps,
+            upload: upload.meanMbps,
+            latencyMs: idleLatency.avgMs,
+            jitterMs: idleLatency.jitterMs
+        )
     }
 }
 
@@ -131,11 +160,11 @@ public struct SpeedTestConfig: Sendable {
     public static let `default` = SpeedTestConfig(
         baseURL: URL(string: "https://speed.cloudflare.com")!,
         concurrency: 6,
-        downloadDuration: 10,
-        uploadDuration: 10,
+        downloadDuration: 8,
+        uploadDuration: 8,
         downloadBytesPerRequest: 25_000_000,
         uploadBytesPerRequest: 5_000_000,
-        idleLatencyProbeCount: 20,
+        idleLatencyProbeCount: 10,
         sampleInterval: 0.2
     )
 

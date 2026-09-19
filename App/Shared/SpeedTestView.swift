@@ -1,40 +1,308 @@
 import SwiftUI
+import UIKit
 import CFSpeedKit
 
 struct SpeedTestView: View {
     @StateObject private var runner = SpeedTestRunner()
 
     var body: some View {
-        VStack(spacing: 32) {
-            Text("CF Speed Test")
-                .font(.largeTitle.bold())
+        ZStack {
+            backgroundGradient
 
-            VStack(spacing: 8) {
-                metricRow(label: "Ping", value: String(format: "%.0f ms", runner.latencyMs))
-                metricRow(label: "Download", value: String(format: "%.1f Mbps", runner.downloadMbps))
-                metricRow(label: "Upload", value: String(format: "%.1f Mbps", runner.uploadMbps))
-            }
-            .font(.title2)
+            ScrollView {
+                VStack(spacing: 28) {
+                    header
 
-            statusLabel
+                    GlassEffectContainer(spacing: 16) {
+                        heroCard
+                        if runner.phase == .finished || isRunning {
+                            secondaryStatsRow
+                        }
+                    }
 
-            if let result = runner.result {
-                resultSummary(result)
-            }
+                    if let result = runner.result {
+                        qualitySection(result.quality)
+                        serverSection(result.meta)
+                        latencySection(result)
+                    }
 
-            Button(action: runner.start) {
-                Text(isRunning ? "Testing…" : "Start Test")
-                    .font(.title3.bold())
-                    .frame(minWidth: 220, minHeight: 48)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(isRunning)
-
-            if !runner.meta.isEmptyDisplay {
-                metaFooter
+                    actionButton
+                        .padding(.top, runner.result == nil ? 8 : 0)
+                }
+                .padding(20)
+                .padding(.top, 12)
             }
         }
-        .padding(40)
+        .task {
+            if runner.phase == .idle {
+                runner.start()
+            }
+        }
+    }
+
+    // MARK: - Background
+
+    private var backgroundGradient: some View {
+        LinearGradient(
+            colors: [Color.orange.opacity(0.35), Color.pink.opacity(0.2), Color(uiColor: .platformBackground)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        VStack(spacing: 4) {
+            Text("Speed Test")
+                .font(.title2.bold())
+            Text(statusText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .contentTransition(.opacity)
+                .animation(.easeInOut, value: statusText)
+        }
+    }
+
+    // MARK: - Hero
+
+    private var heroCard: some View {
+        VStack(spacing: 6) {
+            Image(systemName: heroIcon)
+                .font(.title3)
+                .foregroundStyle(.secondary)
+
+            Text(heroValueText)
+                .font(.system(size: 72, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .animation(.snappy, value: heroValueText)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+
+            Text(heroUnitText)
+                .font(.title3.weight(.medium))
+                .foregroundStyle(.secondary)
+
+            Text(heroLabel)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .textCase(.uppercase)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .glassEffect(.regular, in: .rect(cornerRadius: 32))
+    }
+
+    private var heroIcon: String {
+        switch runner.phase {
+        case .connecting, .latency: return "dot.radiowaves.left.and.right"
+        case .download: return "arrow.down.circle"
+        case .upload: return "arrow.up.circle"
+        default: return "checkmark.circle"
+        }
+    }
+
+    private var heroLabel: String {
+        switch runner.phase {
+        case .connecting, .latency: return "Ping"
+        case .download: return "Download"
+        case .upload: return "Upload"
+        case .finished: return "Download"
+        default: return " "
+        }
+    }
+
+    private var heroValueText: String {
+        switch runner.phase {
+        case .connecting, .latency:
+            return String(format: "%.0f", runner.latencyMs)
+        case .download:
+            return Formatting.speedValue(runner.downloadMbps)
+        case .upload:
+            return Formatting.speedValue(runner.uploadMbps)
+        case .finished:
+            return Formatting.speedValue(runner.result?.download.meanMbps ?? 0)
+        default:
+            return "–"
+        }
+    }
+
+    private var heroUnitText: String {
+        switch runner.phase {
+        case .connecting, .latency: return "ms"
+        case .download: return Formatting.speedUnit(runner.downloadMbps)
+        case .upload: return Formatting.speedUnit(runner.uploadMbps)
+        case .finished: return Formatting.speedUnit(runner.result?.download.meanMbps ?? 0)
+        default: return ""
+        }
+    }
+
+    // MARK: - Secondary stats (upload / latency / jitter chips)
+
+    private var secondaryStatsRow: some View {
+        HStack(spacing: 12) {
+            statChip(icon: "arrow.up.circle", label: "Upload", value: chipUploadText)
+            statChip(icon: "timer", label: "Latency", value: chipLatencyText)
+            statChip(icon: "waveform.path", label: "Jitter", value: chipJitterText)
+        }
+    }
+
+    private var chipUploadText: String {
+        let mbps = runner.result?.upload.meanMbps ?? (runner.phase == .upload ? runner.uploadMbps : 0)
+        return "\(Formatting.speedValue(mbps)) \(Formatting.speedUnit(mbps))"
+    }
+
+    private var chipLatencyText: String {
+        let ms = runner.result?.idleLatency.avgMs ?? runner.latencyMs
+        return String(format: "%.0f ms", ms)
+    }
+
+    private var chipJitterText: String {
+        let ms = runner.result?.idleLatency.jitterMs ?? 0
+        return String(format: "%.1f ms", ms)
+    }
+
+    private func statChip(icon: String, label: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.headline)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+    }
+
+    // MARK: - Network quality
+
+    private func qualitySection(_ quality: NetworkQuality) -> some View {
+        card(title: "Network Quality") {
+            VStack(spacing: 10) {
+                qualityRow(label: "Video Streaming", grade: quality.videoStreaming)
+                Divider()
+                qualityRow(label: "Online Gaming", grade: quality.onlineGaming)
+                Divider()
+                qualityRow(label: "Video Chatting", grade: quality.videoChatting)
+            }
+        }
+    }
+
+    private func qualityRow(label: String, grade: QualityGrade) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(grade.rawValue)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(gradeColor(grade))
+        }
+    }
+
+    private func gradeColor(_ grade: QualityGrade) -> Color {
+        switch grade {
+        case .great: return .green
+        case .good: return .blue
+        case .fair: return .orange
+        case .poor: return .red
+        }
+    }
+
+    // MARK: - Server location
+
+    private func serverSection(_ meta: NetworkMeta) -> some View {
+        card(title: "Server Location") {
+            VStack(spacing: 10) {
+                infoRow(label: "Server", value: serverLocationText(meta))
+                if let country = meta.country {
+                    Divider()
+                    infoRow(label: "Country", value: country)
+                }
+                if let asn = meta.asn {
+                    Divider()
+                    infoRow(label: "Your network", value: "AS\(asn)")
+                }
+                if let ip = meta.clientIP {
+                    Divider()
+                    infoRow(label: "Your IP", value: ip)
+                }
+            }
+        }
+    }
+
+    private func serverLocationText(_ meta: NetworkMeta) -> String {
+        switch (meta.city, meta.colo) {
+        case let (city?, colo?): return "\(city) (\(colo))"
+        case let (city?, nil): return city
+        case let (nil, colo?): return colo
+        case (nil, nil): return ""
+        }
+    }
+
+    private func infoRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label).foregroundStyle(.secondary)
+            Spacer()
+            Text(value.isEmpty ? "–" : value)
+                .multilineTextAlignment(.trailing)
+        }
+        .font(.subheadline)
+    }
+
+    // MARK: - Latency measurements
+
+    private func latencySection(_ result: TestResult) -> some View {
+        card(title: "Latency Measurements") {
+            VStack(spacing: 10) {
+                latencyRow(label: "Unloaded", summary: result.idleLatency)
+                Divider()
+                latencyRow(label: "During download", summary: result.downloadLoadedLatency)
+                Divider()
+                latencyRow(label: "During upload", summary: result.uploadLoadedLatency)
+            }
+        }
+    }
+
+    private func latencyRow(label: String, summary: LatencySummary) -> some View {
+        HStack {
+            Text(label).foregroundStyle(.secondary)
+            Spacer()
+            Text(String(format: "%.1f ms avg · %.1f ms jitter", summary.avgMs, summary.jitterMs))
+                .monospacedDigit()
+        }
+        .font(.subheadline)
+    }
+
+    // MARK: - Shared card container
+
+    private func card<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+            content()
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(.regular, in: .rect(cornerRadius: 24))
+    }
+
+    // MARK: - Action button
+
+    private var actionButton: some View {
+        Button(action: runner.start) {
+            Text(isRunning ? "Testing…" : "Test Again")
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 24)
+        }
+        .buttonStyle(.glassProminent)
+        .disabled(isRunning)
+        .padding(.horizontal, 40)
     }
 
     private var isRunning: Bool {
@@ -46,60 +314,39 @@ struct SpeedTestView: View {
         }
     }
 
-    private var statusLabel: some View {
-        Text(statusText)
-            .font(.headline)
-            .foregroundStyle(.secondary)
-    }
-
     private var statusText: String {
         switch runner.phase {
-        case .idle: return "Ready"
-        case .connecting: return "Connecting to Cloudflare…"
+        case .idle: return "Ready to test"
+        case .connecting: return "Finding the nearest server…"
         case .latency: return "Measuring latency…"
-        case .download: return "Testing download…"
-        case .upload: return "Testing upload…"
-        case .finished: return "Done"
+        case .download: return "Testing download speed…"
+        case .upload: return "Testing upload speed…"
+        case .finished: return "Measured just now"
         case .failed(let message): return "Failed: \(message)"
         }
     }
+}
 
-    private func metricRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label).foregroundStyle(.secondary)
-            Spacer()
-            Text(value).monospacedDigit()
-        }
-        .frame(maxWidth: 360)
-    }
-
-    private func resultSummary(_ result: TestResult) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Idle latency: \(String(format: "%.0f", result.idleLatency.avgMs)) ms (jitter \(String(format: "%.0f", result.idleLatency.jitterMs)) ms)")
-            Text("Download: \(String(format: "%.1f", result.download.meanMbps)) Mbps (median \(String(format: "%.1f", result.download.medianMbps)))")
-            Text("Upload: \(String(format: "%.1f", result.upload.meanMbps)) Mbps (median \(String(format: "%.1f", result.upload.medianMbps)))")
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-    }
-
-    private var metaFooter: some View {
-        VStack(spacing: 2) {
-            if let colo = runner.meta.colo {
-                Text("Server: \(colo)")
-            }
-            if let ip = runner.meta.clientIP {
-                Text("Your IP: \(ip)")
-            }
-        }
-        .font(.caption2)
-        .foregroundStyle(.tertiary)
+private extension UIColor {
+    static var platformBackground: UIColor {
+        #if os(tvOS)
+        .black
+        #else
+        .systemBackground
+        #endif
     }
 }
 
-private extension NetworkMeta {
-    var isEmptyDisplay: Bool {
-        clientIP == nil && colo == nil
+private enum Formatting {
+    static func speedValue(_ mbps: Double) -> String {
+        if mbps >= 1000 {
+            return String(format: "%.2g", mbps / 1000)
+        }
+        return String(format: "%.0f", mbps)
+    }
+
+    static func speedUnit(_ mbps: Double) -> String {
+        mbps >= 1000 ? "Gbps" : "Mbps"
     }
 }
 

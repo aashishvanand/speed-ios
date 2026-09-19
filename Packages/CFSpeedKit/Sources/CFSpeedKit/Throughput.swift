@@ -7,11 +7,13 @@ import Foundation
 func runDownloadPhase(
     client: CloudflareClient,
     config: SpeedTestConfig,
+    onMeta: @escaping @Sendable (NetworkMeta) -> Void,
     onTick: @escaping @Sendable (Double, UInt64) -> Void
 ) async -> ThroughputSummary {
     let counter = ByteCounter()
     let stop = Stopper()
     let collector = SampleCollector()
+    let metaCaptured = Stopper()
 
     await withTaskGroup(of: Void.self) { group in
         for _ in 0..<config.concurrency {
@@ -24,6 +26,10 @@ func runDownloadPhase(
                             await counter.recordError()
                             try? await Task.sleep(nanoseconds: 100_000_000)
                             continue
+                        }
+                        if await !metaCaptured.isStopped {
+                            await metaCaptured.stop()
+                            onMeta(client.meta(from: response))
                         }
                         var buffer = 0
                         for try await _ in bytes {
