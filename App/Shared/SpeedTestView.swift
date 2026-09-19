@@ -1,6 +1,5 @@
 import SwiftUI
 import UIKit
-import Charts
 #if !os(tvOS)
 import MapKit
 #endif
@@ -103,6 +102,13 @@ struct SpeedTestView: View {
                     .foregroundStyle(.tertiary)
                     .textCase(.uppercase)
                     .shadow(color: .black.opacity(0.12), radius: 4, y: 1)
+
+                if runner.phase == .finished {
+                    Text("90th percentile")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .shadow(color: .black.opacity(0.1), radius: 3, y: 1)
+                }
             }
             .padding(.vertical, 32)
         }
@@ -154,7 +160,7 @@ struct SpeedTestView: View {
         case .upload:
             return Formatting.speedValue(runner.uploadMbps)
         case .finished:
-            return Formatting.speedValue(runner.result?.download.meanMbps ?? 0)
+            return Formatting.speedValue(runner.result?.download.p90Mbps ?? 0)
         default:
             return "–"
         }
@@ -165,7 +171,7 @@ struct SpeedTestView: View {
         case .connecting, .latency: return "ms"
         case .download: return Formatting.speedUnit(runner.downloadMbps)
         case .upload: return Formatting.speedUnit(runner.uploadMbps)
-        case .finished: return Formatting.speedUnit(runner.result?.download.meanMbps ?? 0)
+        case .finished: return Formatting.speedUnit(runner.result?.download.p90Mbps ?? 0)
         default: return ""
         }
     }
@@ -181,12 +187,12 @@ struct SpeedTestView: View {
     }
 
     private var chipUploadText: String {
-        let mbps = runner.result?.upload.meanMbps ?? (runner.phase == .upload ? runner.uploadMbps : 0)
+        let mbps = runner.result?.upload.p90Mbps ?? (runner.phase == .upload ? runner.uploadMbps : 0)
         return "\(Formatting.speedValue(mbps)) \(Formatting.speedUnit(mbps))"
     }
 
     private var chipLatencyText: String {
-        let ms = runner.result?.idleLatency.avgMs ?? runner.latencyMs
+        let ms = runner.result?.idleLatency.medianMs ?? runner.latencyMs
         return String(format: "%.0f ms", ms)
     }
 
@@ -247,8 +253,9 @@ struct SpeedTestView: View {
         switch grade {
         case .great: return .green
         case .good: return .blue
-        case .fair: return .orange
-        case .poor: return .red
+        case .average: return .yellow
+        case .poor: return .orange
+        case .bad: return .red
         }
     }
 
@@ -385,39 +392,65 @@ struct SpeedTestView: View {
     }
 }
 
-/// Live area+line chart of instantaneous Mbps samples, meant to sit behind a
-/// glass card's number — the "speedtest feel" of a graph growing in real
-/// time as the test runs, like speed.cloudflare.com's own result charts.
+/// Live area+line sparkline of instantaneous Mbps samples, meant to sit
+/// behind a glass card's number — the "speedtest feel" of a graph growing
+/// in real time as the test runs, like speed.cloudflare.com's own result
+/// charts. Hand-drawn with Canvas rather than Swift Charts: at a 200ms tick
+/// rate Charts was rebuilding a full mark/legend/axis view tree every tick
+/// (all overhead we don't need for an unlabeled sparkline), and a fixed
+/// per-tick `.animation` shorter than the tick interval was stacking
+/// animations faster than they could finish. Canvas is immediate-mode — one
+/// cheap path fill+stroke per frame — and still composites via Core
+/// Animation's normal Metal-backed layer tree, so there's nothing a
+/// hand-rolled Metal renderer would meaningfully speed up here.
 private struct ThroughputGraph: View {
     let samples: [Double]
     let color: Color
     var blurred: Bool = false
 
     var body: some View {
-        Chart {
-            ForEach(Array(samples.enumerated()), id: \.offset) { index, value in
-                AreaMark(x: .value("Tick", index), y: .value("Mbps", value))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [color.opacity(0.28), color.opacity(0.02)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .interpolationMethod(.catmullRom)
-
-                LineMark(x: .value("Tick", index), y: .value("Mbps", value))
-                    .foregroundStyle(color.opacity(blurred ? 0.85 : 0.7))
-                    .lineStyle(StrokeStyle(lineWidth: blurred ? 2.5 : 2))
-                    .interpolationMethod(.catmullRom)
+        Canvas { context, size in
+            guard samples.count > 1 else { return }
+            let maxValue = max(samples.max() ?? 1, 1) * 1.25
+            let stepX = size.width / CGFloat(samples.count - 1)
+            let points = samples.enumerated().map { index, value in
+                CGPoint(x: CGFloat(index) * stepX, y: size.height * (1 - CGFloat(value / maxValue)))
             }
+
+            let line = smoothPath(through: points)
+            var area = line
+            area.addLine(to: CGPoint(x: points[points.count - 1].x, y: size.height))
+            area.addLine(to: CGPoint(x: points[0].x, y: size.height))
+            area.closeSubpath()
+
+            context.fill(
+                area,
+                with: .linearGradient(
+                    Gradient(colors: [color.opacity(0.28), color.opacity(0.02)]),
+                    startPoint: CGPoint(x: 0, y: 0),
+                    endPoint: CGPoint(x: 0, y: size.height)
+                )
+            )
+            context.stroke(
+                line,
+                with: .color(color.opacity(blurred ? 0.85 : 0.7)),
+                lineWidth: blurred ? 2.5 : 2
+            )
         }
-        .chartXAxis(.hidden)
-        .chartYAxis(.hidden)
-        .chartYScale(domain: 0...max((samples.max() ?? 1) * 1.25, 1))
-        .chartLegend(.hidden)
         .blur(radius: blurred ? 6 : 0)
-        .animation(.easeOut(duration: 0.25), value: samples)
+    }
+
+    /// Quadratic-curve-through-midpoints smoothing — a lightweight stand-in
+    /// for Swift Charts' catmullRom interpolation.
+    private func smoothPath(through points: [CGPoint]) -> Path {
+        var path = Path()
+        path.move(to: points[0])
+        for i in 1..<points.count {
+            let mid = CGPoint(x: (points[i - 1].x + points[i].x) / 2, y: (points[i - 1].y + points[i].y) / 2)
+            path.addQuadCurve(to: mid, control: points[i - 1])
+        }
+        path.addLine(to: points[points.count - 1])
+        return path
     }
 }
 

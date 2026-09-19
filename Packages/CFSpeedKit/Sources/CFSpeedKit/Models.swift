@@ -41,15 +41,17 @@ public struct LatencySummary: Sendable, Equatable {
     public var jitterMs: Double
     public var minMs: Double
     public var avgMs: Double
+    public var medianMs: Double
     public var maxMs: Double
     public var samples: [Double]
 
-    public static let failed = LatencySummary(jitterMs: 0, minMs: 0, avgMs: 0, maxMs: 0, samples: [])
+    public static let failed = LatencySummary(jitterMs: 0, minMs: 0, avgMs: 0, medianMs: 0, maxMs: 0, samples: [])
 
-    public init(jitterMs: Double, minMs: Double, avgMs: Double, maxMs: Double, samples: [Double]) {
+    public init(jitterMs: Double, minMs: Double, avgMs: Double, medianMs: Double, maxMs: Double, samples: [Double]) {
         self.jitterMs = jitterMs
         self.minMs = minMs
         self.avgMs = avgMs
+        self.medianMs = medianMs
         self.maxMs = maxMs
         self.samples = samples
     }
@@ -60,12 +62,14 @@ public struct LatencySummary: Sendable, Equatable {
         let min = sorted.first!
         let max = sorted.last!
         let avg = samples.reduce(0, +) / Double(samples.count)
+        let mid = sorted.count / 2
+        let median = sorted.count % 2 == 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
         var jitterSum = 0.0
         for i in 1..<samples.count {
             jitterSum += abs(samples[i] - samples[i - 1])
         }
         let jitter = samples.count > 1 ? jitterSum / Double(samples.count - 1) : 0
-        self.init(jitterMs: jitter, minMs: min, avgMs: avg, maxMs: max, samples: samples)
+        self.init(jitterMs: jitter, minMs: min, avgMs: avg, medianMs: median, maxMs: max, samples: samples)
     }
 }
 
@@ -102,24 +106,71 @@ public enum TestPhase: Sendable, Equatable {
 }
 
 public enum QualityGrade: String, Sendable, Equatable {
-    case great = "Great"
-    case good = "Good"
-    case fair = "Fair"
+    case bad = "Bad"
     case poor = "Poor"
+    case average = "Average"
+    case good = "Good"
+    case great = "Great"
 }
 
-/// Rough per-use-case quality estimate derived from measured throughput and
-/// idle latency/jitter — directionally similar to, but not an exact copy of,
-/// Cloudflare's own "Network Quality Score" categories.
+/// Step function mapping a value to one of `values.count` buckets via
+/// ascending `thresholds` (`thresholds.count == values.count - 1`).
+/// Direct port of scaleThreshold from github.com/cloudflare/speedtest.
+private func scaleThreshold(_ thresholds: [Double], _ values: [Double]) -> (Double) -> Double {
+    { value in
+        var i = 0
+        while i < thresholds.count && value >= thresholds[i] { i += 1 }
+        return values[i]
+    }
+}
+
+/// Cloudflare's published AIM (Aggregated Internet Measurement) scoring:
+/// each raw metric is converted to points via threshold tables, the points
+/// for each experience are summed, and the sum is classified bad...great.
+/// Thresholds and weights are a direct port of the scoring tables in
+/// github.com/cloudflare/speedtest (src/config/internalConfig.ts), which is
+/// the actual engine behind speed.cloudflare.com's own quality score.
 public struct NetworkQuality: Sendable, Equatable {
     public var videoStreaming: QualityGrade
     public var onlineGaming: QualityGrade
     public var videoChatting: QualityGrade
 
-    public init(download: Double, upload: Double, latencyMs: Double, jitterMs: Double) {
-        videoStreaming = download >= 25 ? .great : download >= 10 ? .good : download >= 3 ? .fair : .poor
-        onlineGaming = (latencyMs < 50 && jitterMs < 30) ? .great : (latencyMs < 100 && jitterMs < 50) ? .good : latencyMs < 200 ? .fair : .poor
-        videoChatting = (upload >= 3 && latencyMs < 150) ? .great : (upload >= 1 && latencyMs < 300) ? .good : upload >= 0.5 ? .fair : .poor
+    /// - Parameters:
+    ///   - download: p90 download bandwidth in Mbps.
+    ///   - latencyMs: unloaded (idle) latency.
+    ///   - jitterMs: unloaded (idle) jitter.
+    ///   - loadedLatencyIncreaseMs: max(loaded download latency, loaded upload latency) − unloaded latency.
+    ///   - packetLoss: fraction 0...1; pass 0 when unmeasured (matches the JS engine's own fallback).
+    ///
+    /// Note: none of Cloudflare's three published experiences (streaming,
+    /// gaming, rtc) factor in upload bandwidth at all — only download does,
+    /// and only for streaming. That's their real scoring table, not an
+    /// omission here.
+    public init(download: Double, latencyMs: Double, jitterMs: Double, loadedLatencyIncreaseMs: Double, packetLoss: Double = 0) {
+        let packetLossScore = scaleThreshold([0.01, 0.05, 0.25, 0.5], [10, 5, 0, -10, -20])(packetLoss)
+        let latencyScore = scaleThreshold([10, 20, 50, 100, 500], [20, 10, 5, 0, -10, -20])(latencyMs)
+        let loadedLatencyIncreaseScore = scaleThreshold([10, 20, 50, 100, 500], [20, 10, 5, 0, -10, -20])(loadedLatencyIncreaseMs)
+        let jitterScore = scaleThreshold([10, 20, 100, 500], [10, 5, 0, -10, -20])(jitterMs)
+        let downloadScore = scaleThreshold([1, 10, 50, 100], [0, 5, 10, 20, 30])(download)
+
+        func classify(_ points: [Double], thresholds: [Double]) -> QualityGrade {
+            let sum = max(0, points.reduce(0, +))
+            let idx = Int(scaleThreshold(thresholds, [0, 1, 2, 3, 4])(sum))
+            return [.bad, .poor, .average, .good, .great][idx]
+        }
+
+        videoStreaming = classify(
+            [latencyScore, packetLossScore, downloadScore, loadedLatencyIncreaseScore],
+            thresholds: [15, 20, 40, 60]
+        )
+        onlineGaming = classify(
+            [latencyScore, packetLossScore, loadedLatencyIncreaseScore],
+            thresholds: [5, 15, 25, 30]
+        )
+        videoChatting = classify(
+            [latencyScore, jitterScore, packetLossScore, loadedLatencyIncreaseScore],
+            thresholds: [5, 15, 25, 40]
+        )
     }
 }
 
@@ -139,11 +190,12 @@ public struct TestResult: Sendable, Equatable {
         self.downloadLoadedLatency = downloadLoadedLatency
         self.upload = upload
         self.uploadLoadedLatency = uploadLoadedLatency
+        let loadedLatencyIncrease = max(downloadLoadedLatency.medianMs, uploadLoadedLatency.medianMs) - idleLatency.medianMs
         self.quality = NetworkQuality(
-            download: download.meanMbps,
-            upload: upload.meanMbps,
-            latencyMs: idleLatency.avgMs,
-            jitterMs: idleLatency.jitterMs
+            download: download.p90Mbps,
+            latencyMs: idleLatency.medianMs,
+            jitterMs: idleLatency.jitterMs,
+            loadedLatencyIncreaseMs: max(0, loadedLatencyIncrease)
         )
     }
 }
