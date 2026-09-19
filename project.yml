@@ -37,6 +37,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: 5.10
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 67Z8KU7B9Q
     dependencies:
       - package: CFSpeedKit
 
@@ -56,6 +57,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.tvos
         SWIFT_VERSION: 5.10
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 67Z8KU7B9Q
     dependencies:
       - package: CFSpeedKit
 

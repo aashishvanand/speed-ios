@@ -6,13 +6,17 @@ public struct NetworkMeta: Sendable, Equatable {
     public var city: String?
     public var country: String?
     public var asn: String?
+    public var latitude: Double?
+    public var longitude: Double?
 
-    public init(clientIP: String? = nil, colo: String? = nil, city: String? = nil, country: String? = nil, asn: String? = nil) {
+    public init(clientIP: String? = nil, colo: String? = nil, city: String? = nil, country: String? = nil, asn: String? = nil, latitude: Double? = nil, longitude: Double? = nil) {
         self.clientIP = clientIP
         self.colo = colo
         self.city = city
         self.country = country
         self.asn = asn
+        self.latitude = latitude
+        self.longitude = longitude
     }
 
     public var isEmpty: Bool {
@@ -25,6 +29,8 @@ public struct NetworkMeta: Sendable, Equatable {
         city = city ?? other.city
         country = country ?? other.country
         asn = asn ?? other.asn
+        latitude = latitude ?? other.latitude
+        longitude = longitude ?? other.longitude
     }
 }
 

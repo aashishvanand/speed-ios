@@ -1,10 +1,14 @@
 import SwiftUI
 import UIKit
 import Charts
+#if !os(tvOS)
+import MapKit
+#endif
 import CFSpeedKit
 
 struct SpeedTestView: View {
     @StateObject private var runner = SpeedTestRunner()
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ZStack {
@@ -45,7 +49,9 @@ struct SpeedTestView: View {
 
     private var backgroundGradient: some View {
         LinearGradient(
-            colors: [Color.orange.opacity(0.35), Color.pink.opacity(0.2), Color(uiColor: .platformBackground)],
+            colors: colorScheme == .dark
+                ? [Color.cfOrange.opacity(0.24), Color(uiColor: .platformBackground)]
+                : [Color.cfOrange.opacity(0.38), Color.cfOrange.opacity(0.1), Color(uiColor: .platformBackground)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -251,6 +257,17 @@ struct SpeedTestView: View {
     private func serverSection(_ meta: NetworkMeta) -> some View {
         card(title: "Server Location") {
             VStack(spacing: 10) {
+                #if !os(tvOS)
+                if let latitude = meta.latitude, let longitude = meta.longitude {
+                    ColoMapView(
+                        coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+                        title: meta.colo ?? "Server"
+                    )
+                    .frame(height: 150)
+                    .clipShape(.rect(cornerRadius: 18))
+                }
+                #endif
+
                 infoRow(label: "Server", value: serverLocationText(meta))
                 if let country = meta.country {
                     Divider()
@@ -391,6 +408,33 @@ private struct ThroughputGraph: View {
         .chartLegend(.hidden)
         .animation(.easeOut(duration: 0.25), value: samples)
     }
+}
+
+#if !os(tvOS)
+/// Static, non-interactive map pin at the colo's coordinates — matches the
+/// "Server Location" map on speed.cloudflare.com's own results page.
+private struct ColoMapView: View {
+    let coordinate: CLLocationCoordinate2D
+    let title: String
+
+    var body: some View {
+        Map(
+            initialPosition: .region(
+                MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 25, longitudeDelta: 25))
+            ),
+            interactionModes: []
+        ) {
+            Marker(title, coordinate: coordinate)
+                .tint(Color.cfOrange)
+        }
+        .mapStyle(.standard(pointsOfInterest: .excludingAll))
+        .allowsHitTesting(false)
+    }
+}
+#endif
+
+private extension Color {
+    static let cfOrange = Color(red: 246 / 255, green: 130 / 255, blue: 31 / 255)
 }
 
 private extension UIColor {

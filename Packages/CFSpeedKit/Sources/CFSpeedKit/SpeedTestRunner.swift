@@ -46,8 +46,11 @@ public final class SpeedTestRunner: ObservableObject {
         let client = CloudflareClient(baseURL: config.baseURL)
         phase = .connecting
 
+        async let locationsTask = client.fetchLocations()
         let trace = await client.fetchTrace()
         meta.merge(trace)
+        let locations = await locationsTask
+        resolveColoLocation(locations: locations)
 
         phase = .latency
         let idleLatency = await runLatencyProbes(client: client, count: config.idleLatencyProbeCount) { [weak self] ms in
@@ -57,7 +60,10 @@ public final class SpeedTestRunner: ObservableObject {
 
         phase = .download
         async let downloadResult = runDownloadPhase(client: client, config: config) { [weak self] meta in
-            Task { @MainActor in self?.meta.merge(meta) }
+            Task { @MainActor in
+                self?.meta.merge(meta)
+                self?.resolveColoLocation(locations: locations)
+            }
         } onTick: { [weak self] mbps, _ in
             Task { @MainActor in
                 self?.downloadMbps = mbps
@@ -94,5 +100,12 @@ public final class SpeedTestRunner: ObservableObject {
         result = finalResult
         latencyMs = idleLatency.avgMs
         phase = .finished
+    }
+
+    /// Looks up the current colo's coordinates/city from the /locations list
+    /// (cf-meta-city is frequently absent, so this is the reliable source).
+    private func resolveColoLocation(locations: [ColoLocation]) {
+        guard let colo = meta.colo, let match = locations.first(where: { $0.iata == colo }) else { return }
+        meta.merge(NetworkMeta(city: match.city, country: match.cca2, latitude: match.lat, longitude: match.lon))
     }
 }

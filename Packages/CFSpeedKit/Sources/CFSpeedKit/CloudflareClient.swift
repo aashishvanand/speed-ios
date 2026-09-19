@@ -98,4 +98,23 @@ final class CloudflareClient: @unchecked Sendable {
         }
         return meta
     }
+
+    /// GET /locations — static list of every Cloudflare edge colo with its
+    /// IATA code and coordinates, used to plot the test's colo on a map.
+    func fetchLocations() async -> [ColoLocation] {
+        let url = baseURL.appendingPathComponent("locations")
+        guard let (data, _) = try? await session.data(from: url),
+              let locations = try? JSONDecoder().decode([ColoLocation].self, from: data) else {
+            return []
+        }
+        return locations
+    }
+}
+
+struct ColoLocation: Decodable, Sendable {
+    let iata: String
+    let lat: Double
+    let lon: Double
+    let cca2: String
+    let city: String
 }
