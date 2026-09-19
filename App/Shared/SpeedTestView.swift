@@ -174,7 +174,7 @@ struct SpeedTestView: View {
 
     private var secondaryStatsRow: some View {
         HStack(spacing: 12) {
-            statChip(icon: "arrow.up.circle", label: "Upload", value: chipUploadText, samples: runner.uploadSamples, graphColor: .purple)
+            statChip(icon: "arrow.up.circle", label: "Upload", value: chipUploadText, samples: runner.phase == .finished ? runner.uploadSamples : [], graphColor: .purple)
             statChip(icon: "timer", label: "Latency", value: chipLatencyText)
             statChip(icon: "waveform.path", label: "Jitter", value: chipJitterText)
         }
@@ -397,8 +397,8 @@ private struct ThroughputGraph: View {
                     .interpolationMethod(.catmullRom)
 
                 LineMark(x: .value("Tick", index), y: .value("Mbps", value))
-                    .foregroundStyle(color.opacity(0.7))
-                    .lineStyle(StrokeStyle(lineWidth: 2))
+                    .foregroundStyle(color.opacity(0.85))
+                    .lineStyle(StrokeStyle(lineWidth: 2.5))
                     .interpolationMethod(.catmullRom)
             }
         }
@@ -406,6 +406,7 @@ private struct ThroughputGraph: View {
         .chartYAxis(.hidden)
         .chartYScale(domain: 0...max((samples.max() ?? 1) * 1.25, 1))
         .chartLegend(.hidden)
+        .blur(radius: 6)
         .animation(.easeOut(duration: 0.25), value: samples)
     }
 }
@@ -420,7 +421,7 @@ private struct ColoMapView: View {
     var body: some View {
         Map(
             initialPosition: .region(
-                MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 25, longitudeDelta: 25))
+                MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 4, longitudeDelta: 4))
             ),
             interactionModes: []
         ) {
