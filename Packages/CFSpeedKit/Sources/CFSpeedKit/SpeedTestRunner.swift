@@ -12,6 +12,12 @@ public final class SpeedTestRunner: ObservableObject {
     @Published public private(set) var latencyMs: Double = 0
     @Published public private(set) var result: TestResult?
 
+    /// Instantaneous Mbps samples (one per `sampleInterval` tick) for the
+    /// currently running or most recently completed phase — used to draw the
+    /// live throughput graph behind the hero number.
+    @Published public private(set) var downloadSamples: [Double] = []
+    @Published public private(set) var uploadSamples: [Double] = []
+
     private let config: SpeedTestConfig
     private var runTask: Task<Void, Never>?
 
@@ -26,6 +32,8 @@ public final class SpeedTestRunner: ObservableObject {
         downloadMbps = 0
         uploadMbps = 0
         latencyMs = 0
+        downloadSamples = []
+        uploadSamples = []
         runTask = Task { await run() }
     }
 
@@ -51,7 +59,10 @@ public final class SpeedTestRunner: ObservableObject {
         async let downloadResult = runDownloadPhase(client: client, config: config) { [weak self] meta in
             Task { @MainActor in self?.meta.merge(meta) }
         } onTick: { [weak self] mbps, _ in
-            Task { @MainActor in self?.downloadMbps = mbps }
+            Task { @MainActor in
+                self?.downloadMbps = mbps
+                self?.downloadSamples.append(mbps)
+            }
         }
         async let downloadLoadedLatency = runLoadedLatencyProbes(client: client, duration: config.downloadDuration) { [weak self] ms in
             Task { @MainActor in self?.latencyMs = ms }
@@ -61,7 +72,10 @@ public final class SpeedTestRunner: ObservableObject {
 
         phase = .upload
         async let uploadResult = runUploadPhase(client: client, config: config) { [weak self] mbps, _ in
-            Task { @MainActor in self?.uploadMbps = mbps }
+            Task { @MainActor in
+                self?.uploadMbps = mbps
+                self?.uploadSamples.append(mbps)
+            }
         }
         async let uploadLoadedLatency = runLoadedLatencyProbes(client: client, duration: config.uploadDuration) { [weak self] ms in
             Task { @MainActor in self?.latencyMs = ms }

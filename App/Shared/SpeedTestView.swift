@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Charts
 import CFSpeedKit
 
 struct SpeedTestView: View {
@@ -68,31 +69,55 @@ struct SpeedTestView: View {
     // MARK: - Hero
 
     private var heroCard: some View {
-        VStack(spacing: 6) {
-            Image(systemName: heroIcon)
-                .font(.title3)
-                .foregroundStyle(.secondary)
+        ZStack {
+            ThroughputGraph(samples: heroSamples, color: heroGraphColor)
+                .clipShape(.rect(cornerRadius: 32))
 
-            Text(heroValueText)
-                .font(.system(size: 72, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .contentTransition(.numericText())
-                .animation(.snappy, value: heroValueText)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
+            VStack(spacing: 6) {
+                Image(systemName: heroIcon)
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
 
-            Text(heroUnitText)
-                .font(.title3.weight(.medium))
-                .foregroundStyle(.secondary)
+                Text(heroValueText)
+                    .font(.system(size: 72, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .animation(.snappy, value: heroValueText)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
 
-            Text(heroLabel)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .textCase(.uppercase)
+                Text(heroUnitText)
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .shadow(color: .black.opacity(0.12), radius: 4, y: 1)
+
+                Text(heroLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+                    .shadow(color: .black.opacity(0.12), radius: 4, y: 1)
+            }
+            .padding(.vertical, 32)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
         .glassEffect(.regular, in: .rect(cornerRadius: 32))
+    }
+
+    private var heroSamples: [Double] {
+        switch runner.phase {
+        case .download: return runner.downloadSamples
+        case .upload: return runner.uploadSamples
+        case .finished: return runner.downloadSamples
+        default: return []
+        }
+    }
+
+    private var heroGraphColor: Color {
+        switch runner.phase {
+        case .upload: return .purple
+        default: return .blue
+        }
     }
 
     private var heroIcon: String {
@@ -143,7 +168,7 @@ struct SpeedTestView: View {
 
     private var secondaryStatsRow: some View {
         HStack(spacing: 12) {
-            statChip(icon: "arrow.up.circle", label: "Upload", value: chipUploadText)
+            statChip(icon: "arrow.up.circle", label: "Upload", value: chipUploadText, samples: runner.uploadSamples, graphColor: .purple)
             statChip(icon: "timer", label: "Latency", value: chipLatencyText)
             statChip(icon: "waveform.path", label: "Jitter", value: chipJitterText)
         }
@@ -164,20 +189,27 @@ struct SpeedTestView: View {
         return String(format: "%.1f ms", ms)
     }
 
-    private func statChip(icon: String, label: String, value: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.headline)
-                .monospacedDigit()
-                .contentTransition(.numericText())
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+    private func statChip(icon: String, label: String, value: String, samples: [Double] = [], graphColor: Color? = nil) -> some View {
+        ZStack {
+            if let graphColor, !samples.isEmpty {
+                ThroughputGraph(samples: samples, color: graphColor)
+                    .clipShape(.rect(cornerRadius: 20))
+            }
+
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.headline)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                Text(label)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 14)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
         .glassEffect(.regular, in: .rect(cornerRadius: 20))
     }
 
@@ -324,6 +356,40 @@ struct SpeedTestView: View {
         case .finished: return "Measured just now"
         case .failed(let message): return "Failed: \(message)"
         }
+    }
+}
+
+/// Live area+line chart of instantaneous Mbps samples, meant to sit behind a
+/// glass card's number — the "speedtest feel" of a graph growing in real
+/// time as the test runs, like speed.cloudflare.com's own result charts.
+private struct ThroughputGraph: View {
+    let samples: [Double]
+    let color: Color
+
+    var body: some View {
+        Chart {
+            ForEach(Array(samples.enumerated()), id: \.offset) { index, value in
+                AreaMark(x: .value("Tick", index), y: .value("Mbps", value))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [color.opacity(0.28), color.opacity(0.02)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .interpolationMethod(.catmullRom)
+
+                LineMark(x: .value("Tick", index), y: .value("Mbps", value))
+                    .foregroundStyle(color.opacity(0.7))
+                    .lineStyle(StrokeStyle(lineWidth: 2))
+                    .interpolationMethod(.catmullRom)
+            }
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartYScale(domain: 0...max((samples.max() ?? 1) * 1.25, 1))
+        .chartLegend(.hidden)
+        .animation(.easeOut(duration: 0.25), value: samples)
     }
 }
 
