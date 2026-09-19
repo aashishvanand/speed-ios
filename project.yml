@@ -1,6 +1,6 @@
 name: CFSpeedTest
 options:
-  bundleIdPrefix: com.cfspeedtest
+  bundleIdPrefix: me.aashishvanand.speed
   deploymentTarget:
     iOS: "16.0"
     tvOS: "16.0"
@@ -32,7 +32,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.cfspeedtest.ios
+        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.ios
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: 5.10
     dependencies:
@@ -50,7 +50,7 @@ targets:
         UILaunchScreen: {}
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.cfspeedtest.tvos
+        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.tvos
         SWIFT_VERSION: 5.10
     dependencies:
       - package: CFSpeedKit
