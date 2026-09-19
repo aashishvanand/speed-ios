@@ -1,0 +1,70 @@
+name: CFSpeedTest
+options:
+  bundleIdPrefix: com.cfspeedtest
+  deploymentTarget:
+    iOS: "16.0"
+    tvOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  CFSpeedKit:
+    path: Packages/CFSpeedKit
+
+targets:
+  CFSpeedTest:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/CFSpeedTest
+      - path: App/Shared
+    info:
+      path: App/CFSpeedTest/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cfspeedtest.ios
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: 5.10
+    dependencies:
+      - package: CFSpeedKit
+
+  CFSpeedTest-tvOS:
+    type: application
+    platform: tvOS
+    sources:
+      - path: App/CFSpeedTest-tvOS
+      - path: App/Shared
+    info:
+      path: App/CFSpeedTest-tvOS/Info.plist
+      properties:
+        UILaunchScreen: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cfspeedtest.tvos
+        SWIFT_VERSION: 5.10
+    dependencies:
+      - package: CFSpeedKit
+
+schemes:
+  CFSpeedTest:
+    build:
+      targets:
+        CFSpeedTest: all
+    run:
+      config: Debug
+  CFSpeedTest-tvOS:
+    build:
+      targets:
+        CFSpeedTest-tvOS: all
+    run:
+      config: Debug
