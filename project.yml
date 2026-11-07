@@ -4,6 +4,7 @@ options:
   deploymentTarget:
     iOS: "26.0"
     tvOS: "26.0"
+    macOS: "26.0"
   createIntermediateGroups: true
 
 packages:
@@ -21,6 +22,7 @@ targets:
       path: App/CFSpeed/Info.plist
       properties:
         UILaunchScreen: {}
+        ITSAppUsesNonExemptEncryption: false
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
@@ -35,7 +37,7 @@ targets:
         PRODUCT_NAME: CFSpeed
         PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.ios
         TARGETED_DEVICE_FAMILY: "1,2"
-        SWIFT_VERSION: 5.10
+        SWIFT_VERSION: 6.0
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 67Z8KU7B9Q
     dependencies:
@@ -51,13 +53,42 @@ targets:
       path: App/CFSpeed-tvOS/Info.plist
       properties:
         UILaunchScreen: {}
+        ITSAppUsesNonExemptEncryption: false
     settings:
       base:
         PRODUCT_NAME: CFSpeed
         PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.tvos
-        SWIFT_VERSION: 5.10
+        SWIFT_VERSION: 6.0
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 67Z8KU7B9Q
+    dependencies:
+      - package: CFSpeedKit
+
+  CFSpeed-macOS:
+    type: application
+    platform: macOS
+    sources:
+      - path: App/CFSpeed-macOS
+      - path: App/Shared
+    info:
+      path: App/CFSpeed-macOS/Info.plist
+      properties:
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: public.app-category.utilities
+    entitlements:
+      path: App/CFSpeed-macOS/CFSpeed-macOS.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+    settings:
+      base:
+        PRODUCT_NAME: CFSpeed
+        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.macos
+        SWIFT_VERSION: 6.0
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 67Z8KU7B9Q
+        MACOSX_DEPLOYMENT_TARGET: "26.0"
+        ENABLE_HARDENED_RUNTIME: true
     dependencies:
       - package: CFSpeedKit
 
@@ -72,5 +103,11 @@ schemes:
     build:
       targets:
         CFSpeed-tvOS: all
+    run:
+      config: Debug
+  CFSpeed-macOS:
+    build:
+      targets:
+        CFSpeed-macOS: all
     run:
       config: Debug

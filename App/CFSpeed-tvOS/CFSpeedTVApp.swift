@@ -1,4 +1,5 @@
 import SwiftUI
+import CFSpeedKit
 
 @main
 struct CFSpeedTVApp: App {
@@ -6,5 +7,7 @@ struct CFSpeedTVApp: App {
         WindowGroup {
             SpeedTestView()
         }
+        // Local-only store (CloudKit explicitly off) with retention.
+        .modelContainer(HistoryStore.container)
     }
 }

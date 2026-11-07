@@ -45,8 +45,6 @@ public struct LatencySummary: Sendable, Equatable {
     public var maxMs: Double
     public var samples: [Double]
 
-    public static let failed = LatencySummary(jitterMs: 0, minMs: 0, avgMs: 0, medianMs: 0, maxMs: 0, samples: [])
-
     public init(jitterMs: Double, minMs: Double, avgMs: Double, medianMs: Double, maxMs: Double, samples: [Double]) {
         self.jitterMs = jitterMs
         self.minMs = minMs
@@ -102,7 +100,92 @@ public enum TestPhase: Sendable, Equatable {
     case download
     case upload
     case finished
-    case failed(String)
+    case failed(TestFailure)
+}
+
+/// Why a run couldn't produce a result, derived from the `URLError` the
+/// request actually failed with.
+///
+/// This is deliberately error-driven rather than reachability-driven: Apple
+/// deprecated the pre-flight reachability APIs because a route says nothing
+/// about whether a given host answers, and any check is racy against the
+/// request that follows it. The failing request itself is both the
+/// connectivity check and the explanation.
+public enum TestFailure: Sendable, Equatable {
+    /// No network path at all — airplane mode, Wi-Fi off, no cellular.
+    case offline
+    /// A path exists but policy forbids this transfer: cellular data off for
+    /// the app, Low Data Mode, or roaming disabled.
+    case dataNotAllowed
+    /// Connected, but the edge never answered — captive portal, DNS
+    /// blackhole, blocked endpoint, or a timeout.
+    case unreachable
+    /// The connection worked and then died partway through a measurement.
+    case interrupted
+    case unknown(String)
+
+    public init(_ error: URLError) {
+        switch error.code {
+        case .notConnectedToInternet:
+            self = .offline
+        case .dataNotAllowed, .internationalRoamingOff, .callIsActive:
+            self = .dataNotAllowed
+        case .networkConnectionLost:
+            self = .interrupted
+        case .timedOut, .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed,
+             .secureConnectionFailed, .serverCertificateUntrusted,
+             .appTransportSecurityRequiresSecureConnection, .resourceUnavailable,
+             .badServerResponse:
+            self = .unreachable
+        default:
+            self = .unknown(error.localizedDescription)
+        }
+    }
+
+    /// True when retrying inside the same run can't change the outcome, so
+    /// the run should stop rather than spend its whole probe budget.
+    /// Timeouts and dropped connections are excluded — those are worth a retry.
+    var isTerminal: Bool {
+        switch self {
+        case .offline, .dataNotAllowed: return true
+        case .unreachable, .interrupted, .unknown: return false
+        }
+    }
+
+    public var title: String {
+        switch self {
+        case .offline: return "No Internet Connection"
+        case .dataNotAllowed: return "Data Not Allowed"
+        case .unreachable: return "Can't Reach Cloudflare"
+        case .interrupted: return "Connection Lost"
+        case .unknown: return "Test Failed"
+        }
+    }
+
+    public var message: String {
+        switch self {
+        case .offline:
+            return "Connect to Wi-Fi or cellular data to run a speed test."
+        case .dataNotAllowed:
+            return "This network won't carry the test. Check that cellular data is enabled for this app and that Low Data Mode is off."
+        case .unreachable:
+            return "You're connected, but speed.cloudflare.com didn't respond. You may be behind a captive portal or on a network that blocks it."
+        case .interrupted:
+            return "The connection dropped partway through, so there isn't enough data for an accurate result."
+        case .unknown(let description):
+            return description
+        }
+    }
+
+    public var systemImage: String {
+        switch self {
+        case .offline: return "wifi.slash"
+        case .dataNotAllowed: return "exclamationmark.shield"
+        case .unreachable: return "exclamationmark.triangle"
+        case .interrupted: return "bolt.horizontal.circle"
+        case .unknown: return "xmark.circle"
+        }
+    }
 }
 
 public enum QualityGrade: String, Sendable, Equatable {
@@ -140,13 +223,22 @@ public struct NetworkQuality: Sendable, Equatable {
     ///   - latencyMs: unloaded (idle) latency.
     ///   - jitterMs: unloaded (idle) jitter.
     ///   - loadedLatencyIncreaseMs: max(loaded download latency, loaded upload latency) − unloaded latency.
+    ///     `nil` when the loaded-latency probes returned nothing, which makes
+    ///     the whole score unavailable — see below.
     ///   - packetLoss: fraction 0...1; pass 0 when unmeasured (matches the JS engine's own fallback).
+    ///
+    /// Fails when loaded-latency increase wasn't measured. All three
+    /// experiences weight it, and every threshold table here is ascending
+    /// "lower is better", so substituting 0 for an unmeasured metric scores
+    /// it as *ideal* rather than unknown — which is how a run with no
+    /// loaded-latency samples at all used to grade out as Great.
     ///
     /// Note: none of Cloudflare's three published experiences (streaming,
     /// gaming, rtc) factor in upload bandwidth at all — only download does,
     /// and only for streaming. That's their real scoring table, not an
     /// omission here.
-    public init(download: Double, latencyMs: Double, jitterMs: Double, loadedLatencyIncreaseMs: Double, packetLoss: Double = 0) {
+    public init?(download: Double, latencyMs: Double, jitterMs: Double, loadedLatencyIncreaseMs: Double?, packetLoss: Double = 0) {
+        guard let loadedLatencyIncreaseMs else { return nil }
         let packetLossScore = scaleThreshold([0.01, 0.05, 0.25, 0.5], [10, 5, 0, -10, -20])(packetLoss)
         let latencyScore = scaleThreshold([10, 20, 50, 100, 500], [20, 10, 5, 0, -10, -20])(latencyMs)
         let loadedLatencyIncreaseScore = scaleThreshold([10, 20, 50, 100, 500], [20, 10, 5, 0, -10, -20])(loadedLatencyIncreaseMs)
@@ -178,24 +270,30 @@ public struct TestResult: Sendable, Equatable {
     public var meta: NetworkMeta
     public var idleLatency: LatencySummary
     public var download: ThroughputSummary
-    public var downloadLoadedLatency: LatencySummary
+    /// `nil` when no probe came back during the phase — distinct from
+    /// "measured, and it was 0 ms".
+    public var downloadLoadedLatency: LatencySummary?
     public var upload: ThroughputSummary
-    public var uploadLoadedLatency: LatencySummary
-    public var quality: NetworkQuality
+    public var uploadLoadedLatency: LatencySummary?
+    /// `nil` when a metric the scoring tables need wasn't measured. The UI
+    /// hides the quality card rather than showing a grade we can't justify.
+    public var quality: NetworkQuality?
 
-    public init(meta: NetworkMeta, idleLatency: LatencySummary, download: ThroughputSummary, downloadLoadedLatency: LatencySummary, upload: ThroughputSummary, uploadLoadedLatency: LatencySummary) {
+    public init(meta: NetworkMeta, idleLatency: LatencySummary, download: ThroughputSummary, downloadLoadedLatency: LatencySummary?, upload: ThroughputSummary, uploadLoadedLatency: LatencySummary?) {
         self.meta = meta
         self.idleLatency = idleLatency
         self.download = download
         self.downloadLoadedLatency = downloadLoadedLatency
         self.upload = upload
         self.uploadLoadedLatency = uploadLoadedLatency
-        let loadedLatencyIncrease = max(downloadLoadedLatency.medianMs, uploadLoadedLatency.medianMs) - idleLatency.medianMs
+
+        let loadedMedians = [downloadLoadedLatency?.medianMs, uploadLoadedLatency?.medianMs].compactMap { $0 }
+        let loadedLatencyIncrease = loadedMedians.max().map { max(0, $0 - idleLatency.medianMs) }
         self.quality = NetworkQuality(
             download: download.p90Mbps,
             latencyMs: idleLatency.medianMs,
             jitterMs: idleLatency.jitterMs,
-            loadedLatencyIncreaseMs: max(0, loadedLatencyIncrease)
+            loadedLatencyIncreaseMs: loadedLatencyIncrease
         )
     }
 }
@@ -219,7 +317,7 @@ public struct SpeedTestConfig: Sendable {
     public var sampleInterval: TimeInterval
 
     public static let `default` = SpeedTestConfig(
-        baseURL: URL(string: "https://speed.cloudflare.com")!,
+        baseURL: URL(string: "https://speed.cloudflare.com")!, // static literal, cannot fail
         concurrency: 6,
         downloadDuration: 8,
         uploadDuration: 8,
@@ -238,5 +336,25 @@ public struct SpeedTestConfig: Sendable {
         self.uploadBytesPerRequest = uploadBytesPerRequest
         self.idleLatencyProbeCount = idleLatencyProbeCount
         self.sampleInterval = sampleInterval
+    }
+
+    /// A copy safe to run: values clamped into ranges the engine can handle
+    /// (a zero `sampleInterval` would divide by zero; zero workers would
+    /// measure nothing), and the base URL forced to HTTPS — measurement
+    /// traffic never goes out in clear, and a malformed URL falls back to
+    /// the default endpoint rather than crashing.
+    public func sanitized() -> SpeedTestConfig {
+        var copy = self
+        if baseURL.scheme?.lowercased() != "https" || (baseURL.host ?? "").isEmpty {
+            copy.baseURL = Self.default.baseURL
+        }
+        copy.concurrency = min(max(concurrency, 1), 16)
+        copy.sampleInterval = sampleInterval.isFinite ? min(max(sampleInterval, 0.05), 2) : Self.default.sampleInterval
+        copy.downloadDuration = downloadDuration.isFinite ? min(max(downloadDuration, 1), 60) : Self.default.downloadDuration
+        copy.uploadDuration = uploadDuration.isFinite ? min(max(uploadDuration, 1), 60) : Self.default.uploadDuration
+        copy.downloadBytesPerRequest = max(downloadBytesPerRequest, 1)
+        copy.uploadBytesPerRequest = max(uploadBytesPerRequest, 1)
+        copy.idleLatencyProbeCount = min(max(idleLatencyProbeCount, 1), 50)
+        return copy
     }
 }

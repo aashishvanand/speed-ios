@@ -1,6 +1,6 @@
 # cf-speedtest-ios
 
-A Cloudflare-powered internet speed test for iOS, iPadOS, and tvOS, modeled on
+A Cloudflare-powered internet speed test for iOS, iPadOS, tvOS, and macOS, modeled on
 [cloudflare-speed-cli](https://github.com/kavehtehrani/cloudflare-speed-cli).
 Uses the public `speed.cloudflare.com` endpoints — no API key required.
 
@@ -8,10 +8,11 @@ Uses the public `speed.cloudflare.com` endpoints — no API key required.
 
 - `Packages/CFSpeedKit` — Swift Package with the test engine: `CloudflareClient`
   (talks to `/__down`, `/__up`, `/cdn-cgi/trace`), throughput/latency workers,
-  and `SpeedTestRunner` (an `ObservableObject` orchestrating a full run).
-- `App/Shared` — SwiftUI views shared by both app targets.
+  and `SpeedTestRunner` (an `@Observable` model orchestrating a full run).
+- `App/Shared` — SwiftUI views shared by all app targets.
 - `App/CFSpeed` — iOS/iPadOS app target (universal).
 - `App/CFSpeed-tvOS` — tvOS app target.
+- `App/CFSpeed-macOS` — macOS app target (sandboxed, `network.client` entitlement).
 - `project.yml` — [XcodeGen](https://github.com/yonaskolb/XcodeGen) spec. The
   `.xcodeproj` is generated, not committed.
 
@@ -48,7 +49,7 @@ matching the CLI's steady-state approach.
 
 ## Status
 
-MVP: single-server test against Cloudflare's default edge, no history/storage,
-no IPv4/IPv6 comparison, no traceroute (all present in the CLI). Android
+Single-server test against Cloudflare's default edge, no IPv4/IPv6
+comparison, no traceroute (all present in the CLI). Android
 (phone + tablet + Android TV) will live in a separate `cf-speedtest-android`
 repo — no shared code between Swift and Kotlin, so no benefit to a monorepo.

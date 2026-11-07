@@ -3,10 +3,14 @@ import Foundation
 /// Thin wrapper around Cloudflare's public speed-test endpoints
 /// (speed.cloudflare.com/__down, /__up, /meta, /cdn-cgi/trace).
 /// See https://speed.cloudflare.com/about/ for protocol details.
-final class CloudflareClient: @unchecked Sendable {
+final class CloudflareClient: Sendable {
     let baseURL: URL
     let measId: String
     let session: URLSession
+
+    /// Timeout for the best-effort metadata calls. These are decoration, so
+    /// they must never be the thing a user waits on.
+    static let metadataTimeout: TimeInterval = 8
 
     init(baseURL: URL, measId: String = UUID().uuidString) {
         self.baseURL = baseURL
@@ -16,39 +20,66 @@ final class CloudflareClient: @unchecked Sendable {
         config.httpAdditionalHeaders = ["Referer": "https://speed.cloudflare.com/"]
         config.timeoutIntervalForRequest = 30
         config.httpMaximumConnectionsPerHost = 12
+        // Deliberately opted out of the usual advice to let the session wait
+        // for connectivity. A speed test measures wall-clock transfer over a
+        // fixed duration, so a session that silently stalls and resumes later
+        // would either fold the wait into the measurement or start measuring
+        // at an arbitrary moment. Failing fast lets the runner report *why*
+        // instead — see `TestFailure`.
         config.waitsForConnectivity = false
+        // Every latency probe hits the same URL, and `.ephemeral` still keeps
+        // an in-memory URLCache — a cached reply would read as a ~0 ms RTT.
+        // No cache, no cookies, no credentials: the measurement session
+        // carries no state between requests.
+        config.urlCache = nil
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.httpShouldSetCookies = false
+        config.httpCookieAcceptPolicy = .never
+        config.httpCookieStorage = nil
+        config.urlCredentialStorage = nil
         self.session = URLSession(configuration: config)
     }
 
+    /// URLSession retains itself until invalidated; a client lives for exactly
+    /// one run, so the runner calls this when the run ends.
+    func invalidate() {
+        session.invalidateAndCancel()
+    }
+
     func downURL(bytes: Int) -> URL {
-        var comps = URLComponents(url: baseURL.appendingPathComponent("__down"), resolvingAgainstBaseURL: false)!
-        comps.queryItems = [
+        baseURL.appending(path: "__down").appending(queryItems: [
             URLQueryItem(name: "bytes", value: String(bytes)),
             URLQueryItem(name: "measId", value: measId),
-        ]
-        return comps.url!
+        ])
     }
 
     func upURL() -> URL {
-        var comps = URLComponents(url: baseURL.appendingPathComponent("__up"), resolvingAgainstBaseURL: false)!
-        comps.queryItems = [URLQueryItem(name: "measId", value: measId)]
-        return comps.url!
+        baseURL.appending(path: "__up").appending(queryItems: [
+            URLQueryItem(name: "measId", value: measId),
+        ])
     }
 
-    /// Single round-trip latency probe: GET /__down?bytes=0. TTFB is the RTT to the edge.
-    func probeLatencyMs() async -> Double? {
+    private func metadataRequest(_ path: String) -> URLRequest {
+        var request = URLRequest(url: baseURL.appending(path: path))
+        request.timeoutInterval = Self.metadataTimeout
+        return request
+    }
+
+    /// Single round-trip latency probe: GET /__down?bytes=0. TTFB is the RTT
+    /// to the edge.
+    ///
+    /// Throws rather than returning nil: this is the first request a run
+    /// makes, so its `URLError` is what tells us *why* a test can't proceed
+    /// (offline vs. blocked vs. timing out). Swallowing it here is what left
+    /// the app unable to distinguish those cases.
+    func probeLatencyMs(timeout: TimeInterval = 5) async throws -> Double {
         let url = downURL(bytes: 0)
         var request = URLRequest(url: url)
-        request.timeoutInterval = 5
+        request.timeoutInterval = timeout
         let start = DispatchTime.now()
-        do {
-            let (_, response) = try await session.data(for: request)
-            let elapsedNs = DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds
-            _ = response
-            return Double(elapsedNs) / 1_000_000.0
-        } catch {
-            return nil
-        }
+        _ = try await session.data(for: request)
+        let elapsedNs = DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds
+        return Double(elapsedNs) / 1_000_000.0
     }
 
     func meta(from response: URLResponse) -> NetworkMeta {
@@ -80,9 +111,8 @@ final class CloudflareClient: @unchecked Sendable {
 
     /// GET /cdn-cgi/trace — plain key=value text, fallback source for client IP/colo.
     func fetchTrace() async -> NetworkMeta {
-        let url = baseURL.appendingPathComponent("cdn-cgi/trace")
         var meta = NetworkMeta()
-        guard let (data, _) = try? await session.data(from: url),
+        guard let (data, _) = try? await session.data(for: metadataRequest("cdn-cgi/trace")),
               let text = String(data: data, encoding: .utf8) else {
             return meta
         }
@@ -102,8 +132,7 @@ final class CloudflareClient: @unchecked Sendable {
     /// GET /locations — static list of every Cloudflare edge colo with its
     /// IATA code and coordinates, used to plot the test's colo on a map.
     func fetchLocations() async -> [ColoLocation] {
-        let url = baseURL.appendingPathComponent("locations")
-        guard let (data, _) = try? await session.data(from: url),
+        guard let (data, _) = try? await session.data(for: metadataRequest("locations")),
               let locations = try? JSONDecoder().decode([ColoLocation].self, from: data) else {
             return []
         }
@@ -114,8 +143,7 @@ final class CloudflareClient: @unchecked Sendable {
     /// (asOrganization, not available via headers or /cdn-cgi/trace) plus
     /// the colo's own city/coordinates.
     func fetchMetaInfo() async -> NetworkMeta {
-        let url = baseURL.appendingPathComponent("meta")
-        guard let (data, _) = try? await session.data(from: url),
+        guard let (data, _) = try? await session.data(for: metadataRequest("meta")),
               let response = try? JSONDecoder().decode(MetaResponse.self, from: data) else {
             return NetworkMeta()
         }

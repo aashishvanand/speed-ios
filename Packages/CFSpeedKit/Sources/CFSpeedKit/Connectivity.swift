@@ -1,5 +1,7 @@
 import Foundation
 import Network
+import Observation
+import os
 
 extension ConnectionType {
     init(path: NWPath) {
@@ -30,41 +32,63 @@ func networkPaths() -> AsyncStream<NWPath> {
     }
 }
 
-/// Live view of whether the OS believes this device has a usable network
-/// path, so the UI can show an offline state instead of auto-starting a run
-/// that can only produce zeros.
+/// Live view of the interface currently carrying traffic, and whether the OS
+/// believes there's a usable path at all.
 ///
-/// A satisfied path is necessary but not sufficient: captive portals, DNS
-/// blackholes and blocked endpoints all present as satisfied. The runner
-/// therefore treats "not one latency probe came back" as the authoritative
-/// offline signal — see `SpeedTestRunner.run()`.
+/// This is a UI affordance, not a gate on requests. A satisfied path doesn't
+/// mean a given host answers (captive portals and DNS blackholes both look
+/// satisfied), and any check is racy against the request that follows it.
+/// `SpeedTestRunner` therefore decides from the `URLError` its first real
+/// request fails with. What this is good for is tagging history entries with
+/// the interface, noticing the moment connectivity returns so a failed run
+/// can retry itself, and keeping *automatic* runs off metered links.
 @MainActor
-public final class ConnectivityMonitor: ObservableObject {
-    @Published public private(set) var isOnline = true
-    @Published public private(set) var connectionType: ConnectionType = .unknown
+@Observable
+public final class ConnectivityMonitor {
+    public private(set) var isOnline = true
+    public private(set) var connectionType: ConnectionType = .unknown
+    /// Cellular or a personal hotspot — the OS's "this costs money" flag.
+    public private(set) var isExpensive = false
+    /// Low Data Mode is on for this interface.
+    public private(set) var isConstrained = false
+    /// False until the first path update lands. Until then the flags above
+    /// are placeholders, so nothing should act on them.
+    public private(set) var hasResolvedPath = false
 
-    private var watchTask: Task<Void, Never>?
+    /// A full test can move hundreds of MB, so it only starts on its own over
+    /// an unmetered, unconstrained path. A manual tap is never restricted.
+    public var allowsAutomaticTest: Bool {
+        hasResolvedPath && isOnline && !isExpensive && !isConstrained
+    }
+
+    private let watcher = CancelOnDeinit()
 
     public init() {
-        watchTask = Task { [weak self] in
+        watcher.task = Task { [weak self] in
             for await path in networkPaths() {
                 guard let self else { return }
                 self.isOnline = path.status == .satisfied
                 self.connectionType = ConnectionType(path: path)
+                self.isExpensive = path.isExpensive
+                self.isConstrained = path.isConstrained
+                self.hasResolvedPath = true
             }
         }
     }
+}
 
-    deinit {
-        watchTask?.cancel()
+/// Cancels the task it holds when it's deallocated. Lets a `@MainActor`
+/// owner tear its background task down without touching isolated state from
+/// its nonisolated `deinit`.
+final class CancelOnDeinit: Sendable {
+    private let stored = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
+
+    var task: Task<Void, Never>? {
+        get { stored.withLock { $0 } }
+        set { stored.withLock { $0 = newValue } }
     }
 
-    /// One-shot read of the current path status, for callers that only need
-    /// to gate a single action rather than observe over time.
-    public static func isOnlineNow() async -> Bool {
-        for await path in networkPaths() {
-            return path.status == .satisfied
-        }
-        return false
+    deinit {
+        stored.withLock { $0?.cancel() }
     }
 }

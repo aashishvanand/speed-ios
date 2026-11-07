@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine:
+    name: CFSpeedKit tests
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run unit tests
+        working-directory: Packages/CFSpeedKit
+        # The live integration test skips itself unless CF_SPEEDTEST_LIVE=1,
+        # so CI never sends speed-test traffic.
+        run: swift test
+
+  apps:
+    name: Build ${{ matrix.scheme }}
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scheme: CFSpeed
+            destination: generic/platform=iOS Simulator
+          - scheme: CFSpeed-tvOS
+            destination: generic/platform=tvOS Simulator
+          - scheme: CFSpeed-macOS
+            destination: platform=macOS
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project CFSpeed.xcodeproj \
+            -scheme "${{ matrix.scheme }}" \
+            -destination "${{ matrix.destination }}" \
+            CODE_SIGNING_ALLOWED=NO

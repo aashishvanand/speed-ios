@@ -8,6 +8,15 @@ struct LatencyProbeResult {
     var error: URLError?
 }
 
+/// Stop the idle-latency batch after this many failures in a row. With a 5 s
+/// per-probe timeout, a blackholed network reports in ~15 s rather than
+/// spending the whole probe budget (10 × 5 s) on a foregone conclusion.
+let maxConsecutiveProbeFailures = 3
+
+/// Hard ceiling on the whole idle-latency batch, whatever the mix of
+/// successes and failures.
+let idleLatencyBudget: Duration = .seconds(15)
+
 /// Fires sequential `bytes=0` probes and reports each RTT via `onSample`.
 ///
 /// This doubles as the run's connectivity check: it's the first request a
@@ -18,24 +27,37 @@ func runLatencyProbes(
     count: Int,
     onSample: @escaping @Sendable (Double) -> Void
 ) async -> LatencyProbeResult {
+    let clock = ContinuousClock()
+    let deadline = clock.now + idleLatencyBudget
     var samples: [Double] = []
     var lastError: URLError?
+    var consecutiveFailures = 0
 
     for _ in 0..<count {
+        if Task.isCancelled || clock.now >= deadline { break }
         do {
             let ms = try await client.probeLatencyMs()
             samples.append(ms)
+            consecutiveFailures = 0
             onSample(ms)
         } catch let error as URLError {
             lastError = error
+            consecutiveFailures += 1
             // Airplane mode or a disallowed interface won't resolve itself
-            // mid-run, so stop rather than spending the whole probe budget
-            // on a foregone conclusion. Timeouts still get their retries.
+            // mid-run, so stop at once. Timeouts get a couple of retries,
+            // but not an unbounded number.
             if samples.isEmpty, TestFailure(error).isTerminal { break }
+            if consecutiveFailures >= maxConsecutiveProbeFailures { break }
         } catch {
             lastError = URLError(.unknown)
+            consecutiveFailures += 1
+            if consecutiveFailures >= maxConsecutiveProbeFailures { break }
         }
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        do {
+            try await Task.sleep(for: .milliseconds(100))
+        } catch {
+            break
+        }
     }
 
     return LatencyProbeResult(summary: LatencySummary(samples: samples), error: lastError)
@@ -50,14 +72,29 @@ func runLoadedLatencyProbes(
     duration: TimeInterval,
     onSample: @escaping @Sendable (Double) -> Void
 ) async -> LatencySummary? {
+    let clock = ContinuousClock()
+    let deadline = clock.now + .seconds(duration)
     var samples: [Double] = []
-    let deadline = Date().addingTimeInterval(duration)
-    while Date() < deadline {
-        if let ms = try? await client.probeLatencyMs() {
+    while !Task.isCancelled, clock.now < deadline {
+        // Never let an in-flight probe hold the phase open past its end.
+        let remaining = (deadline - clock.now).timeInterval
+        if let ms = try? await client.probeLatencyMs(timeout: min(5, max(0.5, remaining))) {
             samples.append(ms)
             onSample(ms)
         }
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        do {
+            try await Task.sleep(for: .milliseconds(200))
+        } catch {
+            break
+        }
     }
     return LatencySummary(samples: samples)
+}
+
+extension Duration {
+    /// Seconds as a `Double`, for rate arithmetic.
+    var timeInterval: TimeInterval {
+        let (seconds, attoseconds) = components
+        return Double(seconds) + Double(attoseconds) / 1e18
+    }
 }

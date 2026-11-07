@@ -19,6 +19,7 @@ final class SpeedTestRunnerIntegrationTests: XCTestCase {
             sampleInterval: 0.2
         )
         let runner = SpeedTestRunner(config: config)
+        let started = ContinuousClock.now
         runner.start()
 
         let deadline = Date().addingTimeInterval(30)
@@ -27,6 +28,11 @@ final class SpeedTestRunnerIntegrationTests: XCTestCase {
         }
 
         let result = try XCTUnwrap(runner.result)
+        // Phases must end on their clock, not when the slowest request does:
+        // 3 s + 3 s of transfer plus latency probes and setup.
+        let total = (ContinuousClock.now - started).timeInterval
+        XCTAssertLessThan(total, 15, "run took \(total)s — a phase overran its duration")
+        XCTAssertNotNil(result.meta.colo)
         XCTAssertGreaterThan(result.download.meanMbps, 0)
         XCTAssertGreaterThan(result.upload.meanMbps, 0)
         XCTAssertGreaterThan(result.idleLatency.avgMs, 0)
