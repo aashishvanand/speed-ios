@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import Observation
 import os
 
 /// The network interface a completed test ran over, for display in history.
@@ -58,10 +59,29 @@ public final class TestHistoryEntry {
     }
 }
 
-/// Owns history persistence: a strictly local store (CloudKit sync is
-/// explicitly disabled, so history never leaves the device even if an iCloud
-/// entitlement is added later), a retention cap, and logged — not
-/// swallowed — save failures.
+/// Whether history is actually being persisted, for the UI to surface.
+/// Failures are logged too, but a log line is invisible to the person whose
+/// results are silently not being kept.
+@MainActor
+@Observable
+public final class HistoryHealth {
+    public static let shared = HistoryHealth()
+
+    /// The on-disk store couldn't be opened, so results last only until the
+    /// app quits.
+    public internal(set) var isUsingTemporaryStore = false
+    /// The most recent failed save/prune/delete, cleared by the next success.
+    public internal(set) var lastError: String?
+
+    init() {}
+}
+
+/// Owns history persistence: a local store with no sync of its own (CloudKit
+/// is explicitly disabled, so it stays that way even if an iCloud entitlement
+/// is added later — though like any app data in Application Support it is
+/// included in the user's device and iCloud backups), a retention cap, and
+/// failures that are logged and surfaced through `HistoryHealth` rather than
+/// swallowed.
 public enum HistoryStore {
     /// Newest entries kept; older ones are pruned on each insert.
     public static let retentionLimit = 200
@@ -80,6 +100,7 @@ public enum HistoryStore {
             )
         } catch {
             logger.error("Opening history store failed, using in-memory store: \(error.localizedDescription, privacy: .public)")
+            HistoryHealth.shared.isUsingTemporaryStore = true
             return previewContainer()
         }
     }()
@@ -98,14 +119,21 @@ public enum HistoryStore {
     @MainActor
     public static func record(_ entry: TestHistoryEntry, in context: ModelContext) {
         context.insert(entry)
+        // Save the insert before pruning. A fetch with `fetchOffset` applies
+        // the offset in the store only, then appends unsaved inserts that
+        // match. So the brand-new entry always lands in "overflow" and gets
+        // deleted. Fetching saved rows only avoids that.
+        save(context)
         var overflow = FetchDescriptor<TestHistoryEntry>(sortBy: [SortDescriptor(\.date, order: .reverse)])
         overflow.fetchOffset = retentionLimit
+        overflow.includePendingChanges = false
         do {
             for stale in try context.fetch(overflow) {
                 context.delete(stale)
             }
         } catch {
             logger.error("Pruning history failed: \(error.localizedDescription, privacy: .public)")
+            HistoryHealth.shared.lastError = error.localizedDescription
         }
         save(context)
     }
@@ -122,6 +150,8 @@ public enum HistoryStore {
             try context.delete(model: TestHistoryEntry.self)
         } catch {
             logger.error("Clearing history failed: \(error.localizedDescription, privacy: .public)")
+            HistoryHealth.shared.lastError = error.localizedDescription
+            return
         }
         save(context)
     }
@@ -130,8 +160,10 @@ public enum HistoryStore {
     static func save(_ context: ModelContext) {
         do {
             try context.save()
+            HistoryHealth.shared.lastError = nil
         } catch {
             logger.error("Saving history failed: \(error.localizedDescription, privacy: .public)")
+            HistoryHealth.shared.lastError = error.localizedDescription
         }
     }
 }

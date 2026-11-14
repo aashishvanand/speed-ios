@@ -33,6 +33,20 @@ struct ConfigSanitizingTests {
         #expect(safe.idleLatencyProbeCount == 1)
     }
 
+    @Test("Oversized values are capped")
+    func capsValues() {
+        var config = SpeedTestConfig.default
+        config.concurrency = 64
+        config.uploadBytesPerRequest = .max
+        config.downloadBytesPerRequest = .max
+        let safe = config.sanitized()
+        #expect(safe.concurrency == SpeedTestConfig.maxConcurrency)
+        #expect(safe.uploadBytesPerRequest == SpeedTestConfig.maxUploadBytesPerRequest)
+        #expect(safe.downloadBytesPerRequest == SpeedTestConfig.maxDownloadBytesPerRequest)
+        // Workers never use up every connection: probes and metadata need room.
+        #expect(CloudflareClient.maxConnections(forConcurrency: safe.concurrency) > safe.concurrency + 1)
+    }
+
     @Test("The default config passes through unchanged")
     func defaultUnchanged() {
         let d = SpeedTestConfig.default
@@ -79,9 +93,10 @@ struct EnginePrimitiveTests {
 
     @Test("Summary drops the ramp-up samples")
     func summaryDropsRampUp() {
-        // 10 samples: the first 2 (20%) are slow-start and must not count.
-        let samples: [Double] = [1, 1, 100, 100, 100, 100, 100, 100, 100, 100]
-        let summary = summarize(totalBytes: 1, samples: samples, duration: 2)
+        // 10 s at 1 s ticks: the first 2 s (20%) are slow start and must not count.
+        let values: [Double] = [1, 1, 100, 100, 100, 100, 100, 100, 100, 100]
+        let samples = values.enumerated().map { ThroughputSample(start: Double($0.offset), end: Double($0.offset + 1), mbps: $0.element) }
+        let summary = summarize(totalBytes: 1, samples: samples, duration: 10)
         #expect(summary.p25Mbps == 100)
         #expect(summary.meanMbps == 100)
     }

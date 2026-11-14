@@ -11,6 +11,7 @@ struct SpeedTestView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showHistory = false
     /// The launch-time automatic run is attempted once per launch, as soon as
     /// the network path is known.
@@ -42,6 +43,10 @@ struct SpeedTestView: View {
                             }
                         }
 
+                        // Right under the numbers, so "Test Again" doesn't
+                        // sit below every result card.
+                        actionButton
+
                         if let result = runner.result {
                             // No quality card when a metric the scoring
                             // needs went unmeasured — better a missing card
@@ -52,10 +57,10 @@ struct SpeedTestView: View {
                             serverSection(result.meta)
                             latencySection(result)
                         }
-
-                        actionButton
-                            .padding(.top, runner.result == nil ? 8 : 0)
                     }
+                    // Readable line lengths on iPad and wide Mac windows.
+                    .frame(maxWidth: 640)
+                    .frame(maxWidth: .infinity)
                     .padding(20)
                     .padding(.top, 12)
                 }
@@ -65,7 +70,7 @@ struct SpeedTestView: View {
                     Button {
                         showHistory = true
                     } label: {
-                        Image(systemName: "clock.arrow.circlepath")
+                        Label("History", systemImage: "clock.arrow.circlepath")
                     }
                 }
             }
@@ -84,7 +89,8 @@ struct SpeedTestView: View {
                 runner.start()
             }
         }
-        .onChange(of: runner.phase) { _, newPhase in
+        .onChange(of: runner.phase) { oldPhase, newPhase in
+            announce(newPhase, from: oldPhase)
             guard newPhase == .finished, let result = runner.result else { return }
             saveHistoryEntry(for: result)
         }
@@ -107,14 +113,43 @@ struct SpeedTestView: View {
                     resumeWhenActive = true
                 }
             case .active:
+                // Only pick the run back up where an automatic start would be
+                // allowed: it may have begun on Wi-Fi and be coming back on
+                // cellular or in Low Data Mode. Otherwise stay idle; the
+                // subtitle explains why.
                 if resumeWhenActive {
                     resumeWhenActive = false
-                    runner.start()
+                    if connectivity.allowsAutomaticTest {
+                        runner.start()
+                    }
                 }
             default:
                 break
             }
         }
+    }
+
+    /// Tells VoiceOver what the run is doing at each step — but not the 5 Hz
+    /// number updates, which would drown everything else out.
+    private func announce(_ phase: TestPhase, from oldPhase: TestPhase) {
+        let text: String
+        switch phase {
+        case .latency: text = "Measuring latency"
+        case .download: text = "Testing download speed"
+        case .upload: text = "Testing upload speed"
+        case .finished:
+            guard let result = runner.result else { return }
+            text = "Test complete. Download \(SpeedFormat.text(result.download.p90Mbps)), upload \(SpeedFormat.text(result.upload.p90Mbps)), latency \(Int(result.idleLatency.medianMs.rounded())) milliseconds."
+        case .failed(let failure):
+            text = "Test failed. \(failure.title)."
+        case .idle:
+            guard oldPhase != .idle, oldPhase != .finished else { return }
+            if case .failed = oldPhase { return }
+            text = "Test stopped"
+        case .connecting:
+            return
+        }
+        AccessibilityNotification.Announcement(text).post()
     }
 
     private func saveHistoryEntry(for result: TestResult) {
@@ -156,13 +191,17 @@ struct SpeedTestView: View {
         VStack(spacing: 4) {
             Text(titleText)
                 .font(.title2.bold())
-                .contentTransition(.opacity)
-                .animation(.easeInOut, value: titleText)
+                // Wraps at large text sizes; keep it centered like the status line.
+                .multilineTextAlignment(.center)
+                .contentTransition(reduceMotion ? .identity : .opacity)
+                .animation(reduceMotion ? nil : .easeInOut, value: titleText)
+                .accessibilityAddTraits(.isHeader)
             Text(statusText)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-                .contentTransition(.opacity)
-                .animation(.easeInOut, value: statusText)
+                .multilineTextAlignment(.center)
+                .contentTransition(reduceMotion ? .identity : .opacity)
+                .animation(reduceMotion ? nil : .easeInOut, value: statusText)
         }
     }
 
@@ -190,6 +229,7 @@ struct SpeedTestView: View {
         .padding(.vertical, 44)
         .frame(maxWidth: .infinity)
         .glassEffect(.regular, in: .rect(cornerRadius: 32))
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Network quality
@@ -207,13 +247,14 @@ struct SpeedTestView: View {
     }
 
     private func qualityRow(label: String, grade: QualityGrade) -> some View {
-        HStack {
+        AdaptiveRow {
             Text(label)
-            Spacer()
+        } value: {
             Text(grade.rawValue)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(gradeColor(grade))
         }
+        .accessibilityElement(children: .combine)
     }
 
     private func gradeColor(_ grade: QualityGrade) -> Color {
@@ -278,13 +319,13 @@ struct SpeedTestView: View {
     }
 
     private func infoRow(label: String, value: String) -> some View {
-        HStack {
+        AdaptiveRow {
             Text(label).foregroundStyle(.secondary)
-            Spacer()
+        } value: {
             Text(value.isEmpty ? "–" : value)
-                .multilineTextAlignment(.trailing)
         }
         .font(.subheadline)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Latency measurements
@@ -302,9 +343,9 @@ struct SpeedTestView: View {
     }
 
     private func latencyRow(label: String, summary: LatencySummary?) -> some View {
-        HStack {
+        AdaptiveRow {
             Text(label).foregroundStyle(.secondary)
-            Spacer()
+        } value: {
             if let summary {
                 Text(String(format: "%.1f ms avg · %.1f ms jitter", summary.avgMs, summary.jitterMs))
                     .monospacedDigit()
@@ -314,6 +355,7 @@ struct SpeedTestView: View {
             }
         }
         .font(.subheadline)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Shared card container
@@ -331,22 +373,35 @@ struct SpeedTestView: View {
 
     // MARK: - Action button
 
+    @ViewBuilder
     private var actionButton: some View {
-        Button(action: runner.start) {
-            Text(actionButtonTitle)
-                .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 24)
+        if isRunning {
+            Button(role: .cancel) {
+                resumeWhenActive = false
+                runner.cancel()
+            } label: {
+                Text("Cancel")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 24)
+            }
+            .buttonStyle(.glass)
+            .padding(.horizontal, 40)
+        } else {
+            Button(action: runner.start) {
+                Text(actionButtonTitle)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 24)
+            }
+            .buttonStyle(.glassProminent)
+            .padding(.horizontal, 40)
         }
-        .buttonStyle(.glassProminent)
-        .disabled(isRunning)
-        .padding(.horizontal, 40)
     }
 
     private var actionButtonTitle: String {
         switch runner.phase {
-        case .idle: return "Start Test"
         case .failed: return "Try Again"
-        default: return isRunning ? "Testing…" : "Test Again"
+        case .finished: return "Test Again"
+        default: return "Start Test"
         }
     }
 
@@ -367,7 +422,10 @@ struct SpeedTestView: View {
         case .idle:
             // Explain why nothing happened on launch rather than leaving the
             // user to wonder whether the app is broken.
-            if didConsiderAutoStart, connectivity.hasResolvedPath, !connectivity.allowsAutomaticTest, connectivity.isOnline {
+            if connectivity.hasResolvedPath, !connectivity.isOnline {
+                return "You're offline — connect to run a test"
+            }
+            if didConsiderAutoStart, connectivity.hasResolvedPath, !connectivity.allowsAutomaticTest {
                 return connectivity.isConstrained
                     ? "Low Data Mode is on — tap to test"
                     : "On a metered connection — tap to test"
@@ -395,6 +453,9 @@ struct SpeedTestView: View {
 /// The big number with the live throughput graph behind it.
 private struct HeroCard: View {
     let runner: SpeedTestRunner
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Scales with Dynamic Type, unlike a fixed point size.
+    @ScaledMetric(relativeTo: .largeTitle) private var valueFontSize: CGFloat = 72
 
     var body: some View {
         ZStack {
@@ -407,13 +468,13 @@ private struct HeroCard: View {
                     .foregroundStyle(.secondary)
 
                 Text(heroValueText)
-                    .font(.system(size: 72, weight: .bold, design: .rounded))
+                    .font(.system(size: valueFontSize, weight: .bold, design: .rounded))
                     .monospacedDigit()
-                    .contentTransition(.numericText())
+                    .contentTransition(reduceMotion ? .identity : .numericText())
                     // Live ticks arrive every 200 ms; a spring per tick would stack
                     // animations faster than they finish. A short linear
                     // roll keeps the digits readable without the churn.
-                    .animation(.linear(duration: 0.15), value: heroValueText)
+                    .animation(reduceMotion ? nil : .linear(duration: 0.15), value: heroValueText)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
                     .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
@@ -440,6 +501,25 @@ private struct HeroCard: View {
         }
         .frame(maxWidth: .infinity)
         .glassEffect(.regular, in: .rect(cornerRadius: 32))
+        // One element: "Download, 412 Mbps", not five fragments.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabelText)
+        .accessibilityValue(accessibilityValueText)
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    private var accessibilityLabelText: String {
+        switch runner.phase {
+        case .connecting, .latency: return "Ping"
+        case .download: return "Download"
+        case .upload: return "Upload"
+        case .finished: return "Download, 90th percentile"
+        default: return "Speed"
+        }
+    }
+
+    private var accessibilityValueText: String {
+        heroValueText == "—" ? "Pending" : "\(heroValueText) \(heroUnitText)"
     }
 
     private var heroSamples: [Double] {
@@ -480,24 +560,25 @@ private struct HeroCard: View {
     private var heroValueText: String {
         switch runner.phase {
         case .connecting, .latency:
-            return String(format: "%.0f", runner.latencyMs)
+            // Nothing measured yet reads as pending, not as a 0 ms ping.
+            return runner.latencyMs > 0 ? String(format: "%.0f", runner.latencyMs) : "—"
         case .download:
-            return Formatting.speedValue(runner.downloadMbps)
+            return runner.downloadSamples.isEmpty ? "—" : SpeedFormat.value(runner.downloadMbps)
         case .upload:
-            return Formatting.speedValue(runner.uploadMbps)
+            return runner.uploadSamples.isEmpty ? "—" : SpeedFormat.value(runner.uploadMbps)
         case .finished:
-            return Formatting.speedValue(runner.result?.download.p90Mbps ?? 0)
+            return SpeedFormat.value(runner.result?.download.p90Mbps ?? 0)
         default:
-            return "–"
+            return "—"
         }
     }
 
     private var heroUnitText: String {
         switch runner.phase {
         case .connecting, .latency: return "ms"
-        case .download: return Formatting.speedUnit(runner.downloadMbps)
-        case .upload: return Formatting.speedUnit(runner.uploadMbps)
-        case .finished: return Formatting.speedUnit(runner.result?.download.p90Mbps ?? 0)
+        case .download: return SpeedFormat.unit(runner.downloadMbps)
+        case .upload: return SpeedFormat.unit(runner.uploadMbps)
+        case .finished: return SpeedFormat.unit(runner.result?.download.p90Mbps ?? 0)
         default: return ""
         }
     }
@@ -506,28 +587,55 @@ private struct HeroCard: View {
 /// Upload / latency / jitter chips under the hero card.
 private struct SecondaryStatsRow: View {
     let runner: SpeedTestRunner
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// "Not measured yet", distinct from a real zero.
+    private static let pending = "—"
 
     var body: some View {
-        HStack(spacing: 12) {
+        // Side by side normally; stacked at accessibility text sizes, where
+        // three chips can't share one row legibly.
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 12))
+            : AnyLayout(HStackLayout(spacing: 12))
+        layout {
             statChip(icon: "arrow.up.circle", label: "Upload", value: chipUploadText, samples: runner.phase == .finished ? runner.uploadSamples : [], graphColor: .purple)
-            statChip(icon: "timer", label: "Latency", value: chipLatencyText)
+            statChip(icon: "timer", label: latencyLabel, value: chipLatencyText)
             statChip(icon: "waveform.path", label: "Jitter", value: chipJitterText)
         }
     }
 
     private var chipUploadText: String {
-        let mbps = runner.result?.upload.p90Mbps ?? (runner.phase == .upload ? runner.uploadMbps : 0)
-        return "\(Formatting.speedValue(mbps)) \(Formatting.speedUnit(mbps))"
+        if let result = runner.result {
+            return SpeedFormat.text(result.upload.p90Mbps)
+        }
+        if runner.phase == .upload, !runner.uploadSamples.isEmpty {
+            return SpeedFormat.text(runner.uploadMbps)
+        }
+        return Self.pending
+    }
+
+    /// While transfers run, the live number is latency *under load*; once the
+    /// run is done the chip shows the idle median. Say which.
+    private var latencyLabel: String {
+        switch runner.phase {
+        case .download, .upload: return "Loaded Latency"
+        case .finished: return "Idle Latency"
+        default: return "Latency"
+        }
     }
 
     private var chipLatencyText: String {
-        let ms = runner.result?.idleLatency.medianMs ?? runner.latencyMs
-        return String(format: "%.0f ms", ms)
+        if let result = runner.result {
+            return String(format: "%.0f ms", result.idleLatency.medianMs)
+        }
+        return runner.latencyMs > 0 ? String(format: "%.0f ms", runner.latencyMs) : Self.pending
     }
 
     private var chipJitterText: String {
-        let ms = runner.result?.idleLatency.jitterMs ?? 0
-        return String(format: "%.1f ms", ms)
+        guard let result = runner.result else { return Self.pending }
+        return String(format: "%.1f ms", result.idleLatency.jitterMs)
     }
 
     private func statChip(icon: String, label: String, value: String, samples: [Double] = [], graphColor: Color? = nil) -> some View {
@@ -543,15 +651,45 @@ private struct SecondaryStatsRow: View {
                 Text(value)
                     .font(.headline)
                     .monospacedDigit()
-                    .contentTransition(.numericText())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .contentTransition(reduceMotion ? .identity : .numericText())
                 Text(label)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
             }
             .padding(.vertical, 14)
+            .padding(.horizontal, 6)
         }
         .frame(maxWidth: .infinity)
         .glassEffect(.regular, in: .rect(cornerRadius: 20))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(value == Self.pending ? "Pending" : value)
+    }
+}
+
+/// A label/value row that sits side by side when it fits and stacks when it
+/// doesn't — long ISP names, narrow phones, accessibility text sizes.
+private struct AdaptiveRow<Label: View, Value: View>: View {
+    @ViewBuilder var label: Label
+    @ViewBuilder var value: Value
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline) {
+                label
+                Spacer(minLength: 12)
+                value
+                    .multilineTextAlignment(.trailing)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                label
+                value
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 
@@ -651,19 +789,6 @@ private extension Color {
         #else
         Color(uiColor: .systemBackground)
         #endif
-    }
-}
-
-private enum Formatting {
-    static func speedValue(_ mbps: Double) -> String {
-        if mbps >= 1000 {
-            return String(format: "%.2g", mbps / 1000)
-        }
-        return String(format: "%.0f", mbps)
-    }
-
-    static func speedUnit(_ mbps: Double) -> String {
-        mbps >= 1000 ? "Gbps" : "Mbps"
     }
 }
 

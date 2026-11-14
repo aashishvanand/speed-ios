@@ -122,6 +122,9 @@ public enum TestFailure: Sendable, Equatable {
     case unreachable
     /// The connection worked and then died partway through a measurement.
     case interrupted
+    /// The edge answered, but with an HTTP error — typically 429 (rate
+    /// limited) or 403 (blocked by a network filter).
+    case rejected(statusCode: Int)
     case unknown(String)
 
     public init(_ error: URLError) {
@@ -142,13 +145,22 @@ public enum TestFailure: Sendable, Equatable {
         }
     }
 
+    /// Classifies whatever a latency probe threw.
+    init(probeError error: Error) {
+        switch error {
+        case let status as HTTPStatusError: self = .rejected(statusCode: status.statusCode)
+        case let urlError as URLError: self.init(urlError)
+        default: self = .unknown(error.localizedDescription)
+        }
+    }
+
     /// True when retrying inside the same run can't change the outcome, so
     /// the run should stop rather than spend its whole probe budget.
     /// Timeouts and dropped connections are excluded — those are worth a retry.
     var isTerminal: Bool {
         switch self {
         case .offline, .dataNotAllowed: return true
-        case .unreachable, .interrupted, .unknown: return false
+        case .unreachable, .interrupted, .rejected, .unknown: return false
         }
     }
 
@@ -158,6 +170,7 @@ public enum TestFailure: Sendable, Equatable {
         case .dataNotAllowed: return "Data Not Allowed"
         case .unreachable: return "Can't Reach Cloudflare"
         case .interrupted: return "Connection Lost"
+        case .rejected: return "Test Refused"
         case .unknown: return "Test Failed"
         }
     }
@@ -172,6 +185,10 @@ public enum TestFailure: Sendable, Equatable {
             return "You're connected, but speed.cloudflare.com didn't respond. You may be behind a captive portal or on a network that blocks it."
         case .interrupted:
             return "The connection dropped partway through, so there isn't enough data for an accurate result."
+        case .rejected(let statusCode) where statusCode == 429:
+            return "speed.cloudflare.com is limiting requests from your network (HTTP 429). Wait a few minutes and try again."
+        case .rejected(let statusCode):
+            return "speed.cloudflare.com answered with HTTP \(statusCode) instead of test data. A network filter or proxy may be blocking it."
         case .unknown(let description):
             return description
         }
@@ -183,6 +200,7 @@ public enum TestFailure: Sendable, Equatable {
         case .dataNotAllowed: return "exclamationmark.shield"
         case .unreachable: return "exclamationmark.triangle"
         case .interrupted: return "bolt.horizontal.circle"
+        case .rejected: return "hand.raised"
         case .unknown: return "xmark.circle"
         }
     }
@@ -338,6 +356,19 @@ public struct SpeedTestConfig: Sendable {
         self.sampleInterval = sampleInterval
     }
 
+    /// Most throughput workers a run will use. Leaves room under the client's
+    /// per-host connection limit (`CloudflareClient.maxConnections`) for the
+    /// loaded-latency probe and metadata requests, which would otherwise queue
+    /// behind transfers and read as extra latency.
+    public static let maxConcurrency = 8
+
+    /// Largest upload body per request. Each worker shares one buffer, but it
+    /// still lives in memory for the whole phase.
+    public static let maxUploadBytesPerRequest = 50_000_000
+
+    /// Largest download size requested per transfer.
+    public static let maxDownloadBytesPerRequest = 1_000_000_000
+
     /// A copy safe to run: values clamped into ranges the engine can handle
     /// (a zero `sampleInterval` would divide by zero; zero workers would
     /// measure nothing), and the base URL forced to HTTPS — measurement
@@ -348,12 +379,12 @@ public struct SpeedTestConfig: Sendable {
         if baseURL.scheme?.lowercased() != "https" || (baseURL.host ?? "").isEmpty {
             copy.baseURL = Self.default.baseURL
         }
-        copy.concurrency = min(max(concurrency, 1), 16)
+        copy.concurrency = min(max(concurrency, 1), Self.maxConcurrency)
         copy.sampleInterval = sampleInterval.isFinite ? min(max(sampleInterval, 0.05), 2) : Self.default.sampleInterval
         copy.downloadDuration = downloadDuration.isFinite ? min(max(downloadDuration, 1), 60) : Self.default.downloadDuration
         copy.uploadDuration = uploadDuration.isFinite ? min(max(uploadDuration, 1), 60) : Self.default.uploadDuration
-        copy.downloadBytesPerRequest = max(downloadBytesPerRequest, 1)
-        copy.uploadBytesPerRequest = max(uploadBytesPerRequest, 1)
+        copy.downloadBytesPerRequest = min(max(downloadBytesPerRequest, 1), Self.maxDownloadBytesPerRequest)
+        copy.uploadBytesPerRequest = min(max(uploadBytesPerRequest, 1), Self.maxUploadBytesPerRequest)
         copy.idleLatencyProbeCount = min(max(idleLatencyProbeCount, 1), 50)
         return copy
     }

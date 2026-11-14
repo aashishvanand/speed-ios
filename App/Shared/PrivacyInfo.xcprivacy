@@ -2,9 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- No tracking, no tracking domains, nothing collected: test history is
-	     stored on-device only (SwiftData, CloudKit disabled), and the only
-	     network traffic is the speed test itself to speed.cloudflare.com. -->
+	<!-- No tracking, no tracking domains, nothing collected by the developer.
+	     Test history is stored locally (SwiftData, CloudKit disabled; included
+	     in the user's own device/iCloud backups like any app data). Network
+	     traffic: the speed test itself to speed.cloudflare.com, and on iOS and
+	     macOS, Apple Maps tile requests made by MapKit to draw the server
+	     location map. Neither is used for tracking. -->
 	<key>NSPrivacyTracking</key>
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>

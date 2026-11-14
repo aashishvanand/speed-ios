@@ -15,6 +15,7 @@ final class ByteCounter: Sendable {
     private struct State {
         var total: UInt64 = 0
         var errors: UInt64 = 0
+        var lastRejectedStatus: Int?
     }
 
     private let state = OSAllocatedUnfairLock(initialState: State())
@@ -23,12 +24,29 @@ final class ByteCounter: Sendable {
         state.withLock { $0.total &+= n }
     }
 
+    /// Takes back bytes already counted for a request the server rejected.
+    func subtract(_ n: UInt64) {
+        state.withLock { $0.total = $0.total >= n ? $0.total - n : 0 }
+    }
+
     func recordError() {
         state.withLock { $0.errors += 1 }
     }
 
+    /// A request the server answered with a non-2xx status.
+    func recordRejection(status: Int) {
+        state.withLock {
+            $0.errors += 1
+            $0.lastRejectedStatus = status
+        }
+    }
+
     func snapshot() -> (total: UInt64, errors: UInt64) {
         state.withLock { ($0.total, $0.errors) }
+    }
+
+    var lastRejectedStatus: Int? {
+        state.withLock { $0.lastRejectedStatus }
     }
 }
 
@@ -45,28 +63,40 @@ final class OneShot: Sendable {
     }
 }
 
-/// Per-task delegate that reports upload progress via didSendBodyData so the
-/// byte counter advances incrementally instead of jumping at completion.
-final class UploadProgressDelegate: NSObject, URLSessionTaskDelegate, Sendable {
-    private let counter: ByteCounter
-    private let lastSent = OSAllocatedUnfairLock<Int64>(initialState: 0)
+/// A non-2xx HTTP status. Thrown by latency probes, and reported (not thrown)
+/// by transfers so the worker can count the rejection.
+struct HTTPStatusError: Error, Equatable {
+    let statusCode: Int
+}
 
-    init(counter: ByteCounter) {
-        self.counter = counter
-    }
+extension HTTPURLResponse {
+    var isSuccess: Bool { (200..<300).contains(statusCode) }
+}
 
-    func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
-        let delta = lastSent.withLock { last in
-            defer { last = totalBytesSent }
-            return totalBytesSent - last
-        }
-        guard delta > 0 else { return }
-        counter.add(UInt64(delta))
+/// How one transfer ended.
+struct TransferOutcome: Sendable {
+    /// The response, if headers arrived.
+    var response: HTTPURLResponse?
+    /// Upload body bytes this request added to the counter.
+    var bytesSent: UInt64
+
+    var rejectedStatus: Int? {
+        guard let response, !response.isSuccess else { return nil }
+        return response.statusCode
     }
 }
 
-/// Per-task delegate that streams a download's body into the byte counter and
-/// immediately discards it.
+/// Per-task delegate for both directions of a throughput transfer.
+///
+/// - Download: body bytes stream into the counter and are discarded at once,
+///   never buffered.
+/// - Upload: send progress streams into the counter; the (tiny) response body
+///   is discarded, with a size cap so a misbehaving server can't make us
+///   buffer or read without bound.
+///
+/// Either way the status code is checked as soon as headers arrive: a non-2xx
+/// response is cancelled before any of its body is counted, so error pages
+/// never inflate a measurement.
 ///
 /// Downloads use a raw data task rather than `URLSession.bytes(for:)` because
 /// `AsyncBytes` vends a single *byte* per `await`: at line rate that is millions
@@ -74,70 +104,112 @@ final class UploadProgressDelegate: NSObject, URLSessionTaskDelegate, Sendable {
 /// concurrently that pins every thread in the cooperative pool, so the sampling
 /// tick that drives the live graph never gets scheduled and the phase overruns
 /// its duration by an order of magnitude.
-final class DownloadProgressDelegate: NSObject, URLSessionDataDelegate, Sendable {
+final class TransferDelegate: NSObject, URLSessionDataDelegate, Sendable {
+    enum Direction: Sendable {
+        case download
+        /// `bodyLength` is the full upload size, used to credit bytes a 2xx
+        /// response proves were delivered but that progress didn't report.
+        case upload(bodyLength: UInt64)
+    }
+
+    /// Cap on a response body we read only to throw away (upload replies).
+    static let maxDiscardedResponseBytes = 64 * 1024
+
     private struct State {
-        var continuation: CheckedContinuation<URLResponse?, Error>?
-        var response: URLResponse?
+        var continuation: CheckedContinuation<TransferOutcome, Error>?
+        var response: HTTPURLResponse?
+        var lastReportedSent: Int64 = 0
+        var bytesSent: UInt64 = 0
+        var discarded = 0
+        var rejected = false
         var finished = false
     }
 
+    private let direction: Direction
     private let counter: ByteCounter
     private let onResponse: @Sendable (URLResponse) -> Void
     private let state = OSAllocatedUnfairLock<State>(uncheckedState: State())
 
-    init(counter: ByteCounter, onResponse: @escaping @Sendable (URLResponse) -> Void) {
+    init(direction: Direction, counter: ByteCounter, onResponse: @escaping @Sendable (URLResponse) -> Void = { _ in }) {
+        self.direction = direction
         self.counter = counter
         self.onResponse = onResponse
     }
 
-    /// Hands the delegate the continuation to resume once the body completes.
+    /// Hands the delegate the continuation to resume once the task completes.
     /// Called before `resume()`, so it always runs ahead of any callback.
-    func attach(_ continuation: CheckedContinuation<URLResponse?, Error>) {
+    func attach(_ continuation: CheckedContinuation<TransferOutcome, Error>) {
         state.withLockUnchecked { $0.continuation = continuation }
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void) {
-        state.withLockUnchecked { $0.response = response }
+        let http = response as? HTTPURLResponse
+        let ok = http?.isSuccess ?? false
+        state.withLockUnchecked {
+            $0.response = http
+            $0.rejected = !ok
+        }
         onResponse(response)
-        completionHandler(.allow)
+        // Don't read an error page's body at all.
+        completionHandler(ok ? .allow : .cancel)
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        let count = UInt64(data.count)
-        guard count > 0 else { return }
-        counter.add(count)
+        guard !data.isEmpty else { return }
+        switch direction {
+        case .download:
+            counter.add(UInt64(data.count))
+        case .upload:
+            let overLimit = state.withLockUnchecked { state -> Bool in
+                state.discarded += data.count
+                return state.discarded > Self.maxDiscardedResponseBytes
+            }
+            if overLimit { dataTask.cancel() }
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+        let delta = state.withLockUnchecked { state -> Int64 in
+            let delta = totalBytesSent - state.lastReportedSent
+            guard delta > 0 else { return 0 }
+            state.lastReportedSent = totalBytesSent
+            state.bytesSent += UInt64(delta)
+            return delta
+        }
+        guard delta > 0 else { return }
+        counter.add(UInt64(delta))
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        let (continuation, response): (CheckedContinuation<URLResponse?, Error>?, URLResponse?) = state.withLockUnchecked { state in
-            guard !state.finished else { return (nil, nil) }
+        let (continuation, outcome, rejected) = state.withLockUnchecked { state -> (CheckedContinuation<TransferOutcome, Error>?, TransferOutcome, Bool) in
+            guard !state.finished else { return (nil, TransferOutcome(bytesSent: 0), false) }
             state.finished = true
+            // A 2xx reply to a POST means the server took the whole body;
+            // credit whatever progress callbacks didn't report.
+            if error == nil, case .upload(let bodyLength) = direction, state.response?.isSuccess == true, state.bytesSent < bodyLength {
+                let missing = bodyLength - state.bytesSent
+                state.bytesSent = bodyLength
+                counter.add(missing)
+            }
             defer { state.continuation = nil }
-            return (state.continuation, state.response)
+            return (state.continuation, TransferOutcome(response: state.response, bytesSent: state.bytesSent), state.rejected)
         }
-        if let error {
+        // Our own `.cancel` of a rejected response surfaces as a cancellation
+        // error; report the status instead so the worker can count it.
+        if let error, !rejected {
             continuation?.resume(throwing: error)
         } else {
-            continuation?.resume(returning: response ?? task.response)
+            continuation?.resume(returning: outcome)
         }
     }
 }
 
-/// Runs a single download to completion, feeding its bytes into `counter` as
-/// they arrive and discarding them. Returns the response (headers only — the
-/// body is never buffered). Honours task cancellation by cancelling the
-/// underlying transfer mid-stream.
-@discardableResult
-func streamDownload(
-    session: URLSession,
-    request: URLRequest,
-    counter: ByteCounter,
-    onResponse: @escaping @Sendable (URLResponse) -> Void
-) async throws -> URLResponse? {
-    let delegate = DownloadProgressDelegate(counter: counter, onResponse: onResponse)
-    let task = session.dataTask(with: request)
+/// Runs a single transfer task to completion through a `TransferDelegate`.
+/// Honours task cancellation by cancelling the underlying transfer
+/// mid-stream, so a phase ends on its clock even when one body would take far
+/// longer than the phase.
+func runTransfer(_ task: URLSessionTask, delegate: TransferDelegate) async throws -> TransferOutcome {
     task.delegate = delegate
-
     return try await withTaskCancellationHandler {
         try await withCheckedThrowingContinuation { continuation in
             delegate.attach(continuation)

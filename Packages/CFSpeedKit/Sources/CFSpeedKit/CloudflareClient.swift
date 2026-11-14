@@ -8,18 +8,31 @@ final class CloudflareClient: Sendable {
     let measId: String
     let session: URLSession
 
-    /// Timeout for the best-effort metadata calls. These are decoration, so
-    /// they must never be the thing a user waits on.
+    /// Wall-clock limit on each best-effort metadata call. These are
+    /// decoration, so they must never be the thing a user waits on.
     static let metadataTimeout: TimeInterval = 8
 
-    init(baseURL: URL, measId: String = UUID().uuidString) {
+    /// Largest metadata body we'll read. /locations, the biggest, is tens of
+    /// KB; anything far past that is not the response we asked for.
+    static let maxMetadataBytes = 512 * 1024
+
+    /// Per-host connection limit: one per throughput worker, plus room for
+    /// the loaded-latency probe and the three metadata calls so they never
+    /// queue behind transfers.
+    static func maxConnections(forConcurrency concurrency: Int) -> Int {
+        concurrency + 4
+    }
+
+    /// - Parameter protocolClasses: test hook — routes the session through
+    ///   stub `URLProtocol`s instead of the network.
+    init(baseURL: URL, measId: String = UUID().uuidString, concurrency: Int = SpeedTestConfig.default.concurrency, protocolClasses: [AnyClass]? = nil) {
         self.baseURL = baseURL
         self.measId = measId
 
         let config = URLSessionConfiguration.ephemeral
         config.httpAdditionalHeaders = ["Referer": "https://speed.cloudflare.com/"]
         config.timeoutIntervalForRequest = 30
-        config.httpMaximumConnectionsPerHost = 12
+        config.httpMaximumConnectionsPerHost = Self.maxConnections(forConcurrency: concurrency)
         // Deliberately opted out of the usual advice to let the session wait
         // for connectivity. A speed test measures wall-clock transfer over a
         // fixed duration, so a session that silently stalls and resumes later
@@ -37,6 +50,9 @@ final class CloudflareClient: Sendable {
         config.httpCookieAcceptPolicy = .never
         config.httpCookieStorage = nil
         config.urlCredentialStorage = nil
+        if let protocolClasses {
+            config.protocolClasses = protocolClasses
+        }
         self.session = URLSession(configuration: config)
     }
 
@@ -59,10 +75,27 @@ final class CloudflareClient: Sendable {
         ])
     }
 
-    private func metadataRequest(_ path: String) -> URLRequest {
+    /// Fetches a metadata body, or nil on any failure: an error status, a body
+    /// over `maxMetadataBytes`, or `metadataTimeout` passing — a real deadline,
+    /// not URLRequest's idle timeout, which a trickling response can keep
+    /// resetting indefinitely.
+    func fetchMetadata(_ path: String) async -> Data? {
         var request = URLRequest(url: baseURL.appending(path: path))
         request.timeoutInterval = Self.metadataTimeout
-        return request
+        let deadline = ContinuousClock.now + .seconds(Self.metadataTimeout)
+        let limit = Self.maxMetadataBytes
+        let result = try? await withDeadline(deadline) { [session, request] () async throws -> Data? in
+            let (bytes, response) = try await session.bytes(for: request)
+            guard let http = response as? HTTPURLResponse, http.isSuccess,
+                  http.expectedContentLength <= Int64(limit) else { return nil }
+            var data = Data()
+            for try await byte in bytes {
+                data.append(byte)
+                if data.count > limit { return nil }
+            }
+            return data
+        }
+        return result ?? nil
     }
 
     /// Single round-trip latency probe: GET /__down?bytes=0. TTFB is the RTT
@@ -77,8 +110,11 @@ final class CloudflareClient: Sendable {
         var request = URLRequest(url: url)
         request.timeoutInterval = timeout
         let start = DispatchTime.now()
-        _ = try await session.data(for: request)
+        let (_, response) = try await session.data(for: request)
         let elapsedNs = DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds
+        // A fast 403 or 429 is not a round trip to a working edge.
+        guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        guard http.isSuccess else { throw HTTPStatusError(statusCode: http.statusCode) }
         return Double(elapsedNs) / 1_000_000.0
     }
 
@@ -112,7 +148,7 @@ final class CloudflareClient: Sendable {
     /// GET /cdn-cgi/trace — plain key=value text, fallback source for client IP/colo.
     func fetchTrace() async -> NetworkMeta {
         var meta = NetworkMeta()
-        guard let (data, _) = try? await session.data(for: metadataRequest("cdn-cgi/trace")),
+        guard let data = await fetchMetadata("cdn-cgi/trace"),
               let text = String(data: data, encoding: .utf8) else {
             return meta
         }
@@ -132,7 +168,7 @@ final class CloudflareClient: Sendable {
     /// GET /locations — static list of every Cloudflare edge colo with its
     /// IATA code and coordinates, used to plot the test's colo on a map.
     func fetchLocations() async -> [ColoLocation] {
-        guard let (data, _) = try? await session.data(for: metadataRequest("locations")),
+        guard let data = await fetchMetadata("locations"),
               let locations = try? JSONDecoder().decode([ColoLocation].self, from: data) else {
             return []
         }
@@ -143,7 +179,7 @@ final class CloudflareClient: Sendable {
     /// (asOrganization, not available via headers or /cdn-cgi/trace) plus
     /// the colo's own city/coordinates.
     func fetchMetaInfo() async -> NetworkMeta {
-        guard let (data, _) = try? await session.data(for: metadataRequest("meta")),
+        guard let data = await fetchMetadata("meta"),
               let response = try? JSONDecoder().decode(MetaResponse.self, from: data) else {
             return NetworkMeta()
         }

@@ -32,10 +32,27 @@ public final class SpeedTestRunner {
     }
 
     private let config: SpeedTestConfig
+    private let timing: Timing
+    private let makeClient: @MainActor (SpeedTestConfig) -> CloudflareClient
 
-    // Everything belonging to the current run, cancelled together. All
-    // mutation happens on the main actor and checks cancellation first, so a
-    // superseded run can never write over a newer one.
+    /// Engine timings that tests shrink. Production always uses `.default`.
+    struct Timing: Sendable {
+        /// Hard ceiling on the idle-latency batch, whatever the mix of
+        /// successes and failures.
+        var idleLatencyBudget: Duration = .seconds(15)
+        /// How long a finished run waits for metadata still in flight before
+        /// publishing without it. Metadata has had the whole test to arrive,
+        /// so this only matters when something is stalled.
+        var metadataGrace: Duration = .seconds(2)
+
+        static let `default` = Timing()
+    }
+
+    // Everything belonging to the current run, cancelled together. Every run
+    // gets an ID, and every state write checks it (and cancellation) first,
+    // so a superseded or cancelled run can never write over a newer one or
+    // drag the phase back to "running" after a cancel.
+    @ObservationIgnored private var currentRunID = 0
     @ObservationIgnored private var runTask: Task<Void, Never>?
     @ObservationIgnored private var metadataTask: Task<Void, Never>?
     @ObservationIgnored private var eventTask: Task<Void, Never>?
@@ -50,8 +67,17 @@ public final class SpeedTestRunner {
     /// /locations is a static list of every colo; fetch it once per process.
     private static var cachedLocations: [ColoLocation]?
 
-    public init(config: SpeedTestConfig = .default) {
+    public convenience init(config: SpeedTestConfig = .default) {
+        self.init(config: config, timing: .default, protocolClasses: nil)
+    }
+
+    /// Test hook: shorter timings, and a session routed through stub protocols.
+    init(config: SpeedTestConfig, timing: Timing, protocolClasses: [AnyClass]?) {
         self.config = config.sanitized()
+        self.timing = timing
+        self.makeClient = { config in
+            CloudflareClient(baseURL: config.baseURL, concurrency: config.concurrency, protocolClasses: protocolClasses)
+        }
     }
 
     public func start() {
@@ -65,11 +91,16 @@ public final class SpeedTestRunner {
         latencyMs = 0
         downloadSamples = []
         uploadSamples = []
-        runTask = Task { await run() }
+        // Flip to running synchronously, so the UI reflects the tap at once
+        // and a second tap sees a run in progress.
+        phase = .connecting
+        let id = currentRunID
+        runTask = Task { await run(id: id) }
     }
 
     /// Stops the current run immediately and returns to `.idle`.
     public func cancel() {
+        currentRunID += 1
         runTask?.cancel()
         metadataTask?.cancel()
         eventTask?.cancel()
@@ -77,6 +108,11 @@ public final class SpeedTestRunner {
         metadataTask = nil
         eventTask = nil
         if isRunning { phase = .idle }
+    }
+
+    /// True while `id` is still the run the UI is showing.
+    private func isCurrent(_ id: Int) -> Bool {
+        id == currentRunID && !Task.isCancelled
     }
 
     // MARK: - Run
@@ -88,10 +124,11 @@ public final class SpeedTestRunner {
         case headerMeta(NetworkMeta)
     }
 
-    private func run() async {
-        let client = CloudflareClient(baseURL: config.baseURL)
+    private func run(id: Int) async {
+        // Cancelled before it even started: touch nothing.
+        guard isCurrent(id) else { return }
+        let client = makeClient(config)
         defer { client.invalidate() }
-        phase = .connecting
 
         // Engine callbacks fire off the main actor. Funnel them through one
         // FIFO stream drained by one main-actor task, so ticks apply in the
@@ -99,7 +136,7 @@ public final class SpeedTestRunner {
         let (events, sink) = AsyncStream.makeStream(of: Event.self, bufferingPolicy: .unbounded)
         eventTask = Task { [weak self] in
             for await event in events {
-                guard !Task.isCancelled, let self else { return }
+                guard let self, self.isCurrent(id) else { return }
                 self.apply(event)
             }
         }
@@ -107,20 +144,22 @@ public final class SpeedTestRunner {
 
         // Metadata is decoration — colo name, ISP, map pin. Load it alongside
         // the test instead of in front of it, and never fail a run over it.
-        metadataTask = Task { [weak self] in await self?.loadMetadata(client) }
+        let metadataTask = Task { [weak self] () -> Void in await self?.loadMetadata(client, runID: id) }
+        self.metadataTask = metadataTask
+        defer { metadataTask.cancel() }
 
         phase = .latency
-        let idleProbe = await runLatencyProbes(client: client, count: config.idleLatencyProbeCount) { ms in
+        let idleProbe = await runLatencyProbes(client: client, count: config.idleLatencyProbeCount, budget: timing.idleLatencyBudget) { ms in
             sink.yield(.latency(ms))
         }
-        guard !Task.isCancelled else { return }
+        guard isCurrent(id) else { return }
 
         // Not one probe returned, so there is nothing to measure. The probe's
-        // own URLError says why — offline, blocked, or timing out — which is
-        // both more specific and more current than any pre-flight check.
+        // own error says why — offline, blocked, rejected, or timing out —
+        // which is both more specific and more current than any pre-flight
+        // check.
         guard let idleLatency = idleProbe.summary else {
-            metadataTask?.cancel()
-            phase = .failed(idleProbe.error.map(TestFailure.init) ?? .unreachable)
+            phase = .failed(idleProbe.failure ?? .unreachable)
             return
         }
 
@@ -134,13 +173,14 @@ public final class SpeedTestRunner {
             sink.yield(.latency(ms))
         }
         let (download, dlLatency) = await (downloadResult, downloadLoadedLatency)
-        guard !Task.isCancelled else { return }
+        guard isCurrent(id) else { return }
 
         // Latency worked a moment ago, so a phase that moved no bytes at all
-        // means the link died in between. Reporting 0 Mbps as a measurement
-        // would look like a real (terrible) result rather than a failure.
-        guard download.bytes > 0 else {
-            phase = .failed(.interrupted)
+        // means the link died in between — or every request was refused.
+        // Reporting 0 Mbps as a measurement would look like a real (terrible)
+        // result rather than a failure.
+        if let failure = Self.failure(for: download) {
+            phase = .failed(failure)
             return
         }
 
@@ -152,31 +192,48 @@ public final class SpeedTestRunner {
             sink.yield(.latency(ms))
         }
         let (upload, ulLatency) = await (uploadResult, uploadLoadedLatency)
-        guard !Task.isCancelled else { return }
+        guard isCurrent(id) else { return }
 
-        guard upload.bytes > 0 else {
-            phase = .failed(.interrupted)
+        if let failure = Self.failure(for: upload) {
+            phase = .failed(failure)
             return
         }
 
-        // Metadata has had the whole test to arrive and every call is capped
-        // at `CloudflareClient.metadataTimeout`, so this is effectively free.
-        await metadataTask?.value
+        // Publish with whatever metadata has landed. Anything still in flight
+        // gets a short, real grace period, then is cancelled. (Awaiting a
+        // task's value isn't itself cancellable, so the deadline cancels the
+        // metadata task rather than the wait.)
+        let grace = timing.metadataGrace
+        let graceTimer = Task {
+            try? await Task.sleep(for: grace)
+            metadataTask.cancel()
+        }
+        await metadataTask.value
+        graceTimer.cancel()
         // Drain any ticks still queued so none lands after the final values.
         sink.finish()
         await eventTask?.value
-        guard !Task.isCancelled else { return }
+        guard isCurrent(id) else { return }
 
         result = TestResult(
             meta: meta,
             idleLatency: idleLatency,
-            download: download,
+            download: download.summary,
             downloadLoadedLatency: dlLatency,
-            upload: upload,
+            upload: upload.summary,
             uploadLoadedLatency: ulLatency
         )
         latencyMs = idleLatency.avgMs
         phase = .finished
+    }
+
+    /// Why a throughput phase can't stand as a measurement, or nil if it can.
+    private static func failure(for outcome: PhaseOutcome) -> TestFailure? {
+        guard outcome.summary.bytes == 0 else { return nil }
+        if let status = outcome.lastRejectedStatus {
+            return .rejected(statusCode: status)
+        }
+        return .interrupted
     }
 
     private func apply(_ event: Event) {
@@ -197,7 +254,7 @@ public final class SpeedTestRunner {
 
     // MARK: - Metadata
 
-    private func loadMetadata(_ client: CloudflareClient) async {
+    private func loadMetadata(_ client: CloudflareClient, runID: Int) async {
         async let trace = client.fetchTrace()
         async let info = client.fetchMetaInfo()
         #if os(tvOS)
@@ -209,7 +266,7 @@ public final class SpeedTestRunner {
         var fetched = await trace
         fetched.merge(await info)
 
-        guard !Task.isCancelled else { return }
+        guard isCurrent(runID) else { return }
         self.fetchedMeta = fetched
         self.locations = locations
         recomputeMeta()

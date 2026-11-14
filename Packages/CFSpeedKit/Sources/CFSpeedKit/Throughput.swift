@@ -1,5 +1,21 @@
 import Foundation
 
+/// What a throughput phase produced, plus why it may have produced nothing.
+struct PhaseOutcome: Sendable {
+    var summary: ThroughputSummary
+    /// The last non-2xx status the server answered with, if any. When a phase
+    /// moved no bytes, this is the reason to report.
+    var lastRejectedStatus: Int?
+}
+
+/// One throughput sample: Mbps over the interval `start..<end`, both measured
+/// in seconds since the phase began.
+struct ThroughputSample: Sendable, Equatable {
+    var start: TimeInterval
+    var end: TimeInterval
+    var mbps: Double
+}
+
 /// Runs `concurrency` parallel download workers against /__down for `duration`,
 /// sampling cumulative bytes every `sampleInterval` and emitting instantaneous
 /// Mbps via `onTick`. Mirrors cloudflare-speed-cli's approach: fixed-duration
@@ -9,7 +25,7 @@ func runDownloadPhase(
     config: SpeedTestConfig,
     onMeta: @escaping @Sendable (NetworkMeta) -> Void,
     onTick: @escaping @Sendable (Double, UInt64) -> Void
-) async -> ThroughputSummary {
+) async -> PhaseOutcome {
     let metaCaptured = OneShot()
     return await measureThroughput(
         concurrency: config.concurrency,
@@ -18,20 +34,20 @@ func runDownloadPhase(
         onTick: onTick
     ) { counter in
         while !Task.isCancelled {
-            let url = client.downURL(bytes: config.downloadBytesPerRequest)
+            let task = client.session.dataTask(with: URLRequest(url: client.downURL(bytes: config.downloadBytesPerRequest)))
+            let delegate = TransferDelegate(direction: .download, counter: counter) { response in
+                // Only a real answer's headers describe the edge we're testing.
+                guard (response as? HTTPURLResponse)?.isSuccess == true, metaCaptured.claim() else { return }
+                onMeta(client.meta(from: response))
+            }
             do {
-                let response = try await streamDownload(
-                    session: client.session,
-                    request: URLRequest(url: url),
-                    counter: counter
-                ) { response in
-                    guard metaCaptured.claim() else { return }
-                    onMeta(client.meta(from: response))
-                }
-                guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let outcome = try await runTransfer(task, delegate: delegate)
+                if let status = outcome.rejectedStatus {
+                    counter.recordRejection(status: status)
+                    try? await Task.sleep(for: .milliseconds(100))
+                } else if outcome.response == nil {
                     counter.recordError()
                     try? await Task.sleep(for: .milliseconds(100))
-                    continue
                 }
             } catch {
                 if Task.isCancelled { break }
@@ -47,7 +63,7 @@ func runUploadPhase(
     client: CloudflareClient,
     config: SpeedTestConfig,
     onTick: @escaping @Sendable (Double, UInt64) -> Void
-) async -> ThroughputSummary {
+) async -> PhaseOutcome {
     // One zero-filled buffer shared (copy-on-write) by every request.
     let body = Data(count: config.uploadBytesPerRequest)
     return await measureThroughput(
@@ -60,24 +76,45 @@ func runUploadPhase(
             var request = URLRequest(url: client.upURL())
             request.httpMethod = "POST"
             request.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
-            let delegate = UploadProgressDelegate(counter: counter)
+            let task = client.session.uploadTask(with: request, from: body)
+            let delegate = TransferDelegate(direction: .upload(bodyLength: UInt64(body.count)), counter: counter)
             do {
-                // The async upload API cancels the in-flight transfer when
-                // this task is cancelled, so the phase ends on time even when
-                // a single 5 MB body would take far longer than the phase.
-                let (_, response) = try await client.session.upload(for: request, from: body, delegate: delegate)
-                guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                let outcome = try await runTransfer(task, delegate: delegate)
+                if let status = outcome.rejectedStatus {
+                    // The server refused the body, so what we sent wasn't
+                    // throughput. Take it back out of the total.
+                    counter.subtract(outcome.bytesSent)
+                    counter.recordRejection(status: status)
+                    try? await Task.sleep(for: .milliseconds(100))
+                } else if outcome.response == nil {
                     counter.recordError()
                     try? await Task.sleep(for: .milliseconds(100))
-                    continue
                 }
             } catch {
+                // Cut short by the phase deadline: those bytes really went out
+                // over the link, so they stay counted.
                 if Task.isCancelled { break }
                 counter.recordError()
                 try? await Task.sleep(for: .milliseconds(100))
             }
         }
     }
+}
+
+/// The next sampling tick, as seconds since the phase began.
+///
+/// Normally one `interval` after `previous`. After a late wakeup (the
+/// process was descheduled, the pool was saturated) it skips straight to the
+/// first tick still in the future: firing every overdue tick back-to-back
+/// would produce samples over a near-zero Δt that read as absurdly high or
+/// as 0. Never past `end`.
+func nextTickOffset(after previous: TimeInterval, now: TimeInterval, interval: TimeInterval, end: TimeInterval) -> TimeInterval {
+    var next = previous + interval
+    if next <= now {
+        let skipped = ((now - previous) / interval).rounded(.down)
+        next = previous + (skipped + 1) * interval
+    }
+    return min(next, end)
 }
 
 /// Shared phase driver: starts `concurrency` copies of `worker`, samples the
@@ -95,10 +132,10 @@ private func measureThroughput(
     sampleInterval: TimeInterval,
     onTick: @escaping @Sendable (Double, UInt64) -> Void,
     worker: @escaping @Sendable (ByteCounter) async -> Void
-) async -> ThroughputSummary {
+) async -> PhaseOutcome {
     let counter = ByteCounter()
     let clock = ContinuousClock()
-    var samples: [Double] = []
+    var samples: [ThroughputSample] = []
     var measuredSeconds: TimeInterval = 0
 
     await withTaskGroup(of: Void.self) { group in
@@ -107,50 +144,60 @@ private func measureThroughput(
         }
 
         let start = clock.now
-        let end = start + .seconds(duration)
-        let interval = Duration.seconds(sampleInterval)
-        var nextTick = start
-        var lastInstant = start
+        var tick: TimeInterval = 0
+        var lastOffset: TimeInterval = 0
         var lastBytes: UInt64 = 0
 
-        while lastInstant < end {
-            nextTick = min(nextTick + interval, end)
+        while lastOffset < duration {
+            tick = nextTickOffset(after: tick, now: (clock.now - start).timeInterval, interval: sampleInterval, end: duration)
             do {
-                try await clock.sleep(until: nextTick, tolerance: .milliseconds(5))
+                try await clock.sleep(until: start + .seconds(tick), tolerance: .milliseconds(5))
             } catch {
                 break // cancelled
             }
-            let now = clock.now
+            let offset = (clock.now - start).timeInterval
             let bytes = counter.snapshot().total
-            let elapsed = (now - lastInstant).timeInterval
+            let elapsed = offset - lastOffset
             guard elapsed > 0 else { continue }
             let delta = bytes >= lastBytes ? bytes - lastBytes : 0
             let mbps = (Double(delta) * 8.0) / elapsed / 1_000_000.0
+            samples.append(ThroughputSample(start: lastOffset, end: offset, mbps: mbps))
             lastBytes = bytes
-            lastInstant = now
-            samples.append(mbps)
+            lastOffset = offset
             onTick(mbps, bytes)
         }
-        measuredSeconds = (lastInstant - start).timeInterval
+        measuredSeconds = lastOffset
         group.cancelAll()
     }
 
-    return summarize(
-        totalBytes: counter.snapshot().total,
-        samples: samples,
-        duration: measuredSeconds > 0 ? measuredSeconds : duration
+    return PhaseOutcome(
+        summary: summarize(
+            totalBytes: counter.snapshot().total,
+            samples: samples,
+            duration: measuredSeconds > 0 ? measuredSeconds : duration
+        ),
+        lastRejectedStatus: counter.lastRejectedStatus
     )
 }
 
-/// Mirrors cloudflare-speed-cli: drop the ramp-up (first 20%, min 1s) of
-/// per-tick samples before computing percentiles, so TCP slow start doesn't
-/// drag the reported throughput down.
-func summarize(totalBytes: UInt64, samples allSamples: [Double], duration: Double) -> ThroughputSummary {
+/// Length of the ramp-up window dropped from the summary: the first 20% of
+/// the phase, at least 1 s (TCP slow start doesn't care how long the phase
+/// is), but never more than half, so a very short phase keeps some samples.
+func rampUpSeconds(forDuration duration: TimeInterval) -> TimeInterval {
+    min(max(0.2 * duration, 1), 0.5 * duration)
+}
+
+/// Mirrors cloudflare-speed-cli: drop the ramp-up samples before computing
+/// percentiles, so TCP slow start doesn't drag the reported throughput down.
+/// The window is measured in time from each sample's own timestamps, not in
+/// sample counts, so it holds whatever the tick rate or late wakeups did.
+func summarize(totalBytes: UInt64, samples allSamples: [ThroughputSample], duration: Double) -> ThroughputSummary {
     let fallbackMbps = duration > 0 ? (Double(totalBytes) * 8.0) / duration / 1_000_000.0 : 0
 
-    let rampFraction = 0.20
-    let rampCount = max(Int(Double(allSamples.count) * rampFraction), duration >= 1 ? 1 : 0)
-    let steady = allSamples.count > rampCount ? Array(allSamples[rampCount...]) : allSamples
+    // A millisecond of slack so a tick that lands a hair before the boundary
+    // isn't thrown out as ramp-up.
+    let rampEnd = rampUpSeconds(forDuration: duration) - 0.001
+    let steady = allSamples.filter { $0.start >= rampEnd }.map(\.mbps)
     let values = steady.isEmpty ? [fallbackMbps] : steady
 
     let sorted = values.sorted()
