@@ -18,6 +18,8 @@ struct SpeedTestView: View {
     @State private var didConsiderAutoStart = false
     /// A run cut short by backgrounding, to pick back up on return.
     @State private var resumeWhenActive = false
+    /// Width of the scrollable area, which decides between one and two columns.
+    @State private var availableWidth: CGFloat = 0
 
     var body: some View {
         NavigationStack {
@@ -25,44 +27,45 @@ struct SpeedTestView: View {
                 backgroundGradient
 
                 ScrollView {
-                    VStack(spacing: 28) {
-                        header
-
-                        VStack(spacing: 16) {
-                            GlassEffectContainer {
-                                if case .failed(let failure) = runner.phase {
-                                    failureCard(failure)
-                                } else {
-                                    HeroCard(runner: runner)
+                    Group {
+                        if usesTwoColumns, let result = runner.result {
+                            // Wide screens (an unfolded iPhone Duo, iPad in
+                            // landscape): results beside the numbers rather
+                            // than below the fold.
+                            HStack(alignment: .top, spacing: 24) {
+                                // Each column keeps its natural height. An
+                                // HStack offers both columns the taller one's
+                                // height, which the graphs would stretch to fill.
+                                VStack(spacing: 28) { primaryColumn }
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: 560)
+                                VStack(spacing: 28) { resultSections(result) }
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: 560)
+                                    // Line the cards up with the hero card,
+                                    // not with the header above it.
+                                    .padding(.top, 72)
+                            }
+                            .frame(maxWidth: 1144)
+                        } else {
+                            VStack(spacing: 28) {
+                                primaryColumn
+                                if let result = runner.result {
+                                    resultSections(result)
                                 }
                             }
-                            if runner.phase == .finished || isRunning {
-                                GlassEffectContainer(spacing: 16) {
-                                    SecondaryStatsRow(runner: runner)
-                                }
-                            }
-                        }
-
-                        // Right under the numbers, so "Test Again" doesn't
-                        // sit below every result card.
-                        actionButton
-
-                        if let result = runner.result {
-                            // No quality card when a metric the scoring
-                            // needs went unmeasured — better a missing card
-                            // than a grade we can't stand behind.
-                            if let quality = result.quality {
-                                qualitySection(quality)
-                            }
-                            serverSection(result.meta)
-                            latencySection(result)
+                            // Readable line lengths on iPad and wide Mac windows.
+                            .frame(maxWidth: 640)
                         }
                     }
-                    // Readable line lengths on iPad and wide Mac windows.
-                    .frame(maxWidth: 640)
                     .frame(maxWidth: .infinity)
                     .padding(20)
                     .padding(.top, 12)
+                }
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.size.width
+                } action: { width in
+                    availableWidth = width
                 }
             }
             .toolbar {
@@ -127,6 +130,57 @@ struct SpeedTestView: View {
                 break
             }
         }
+    }
+
+    // MARK: - Layout
+
+    /// Two columns once each can be at least as wide as a phone screen.
+    /// iOS only: tvOS is designed around one centered column, and the Mac
+    /// window sizes itself to its content, so a width-dependent layout there
+    /// would feed back into the window size.
+    private var usesTwoColumns: Bool {
+        #if os(iOS)
+        availableWidth >= 820
+        #else
+        false
+        #endif
+    }
+
+    /// Header, live numbers and the action button.
+    @ViewBuilder
+    private var primaryColumn: some View {
+        header
+
+        VStack(spacing: 16) {
+            GlassEffectContainer {
+                if case .failed(let failure) = runner.phase {
+                    failureCard(failure)
+                } else {
+                    HeroCard(runner: runner)
+                }
+            }
+            if runner.phase == .finished || isRunning {
+                GlassEffectContainer(spacing: 16) {
+                    SecondaryStatsRow(runner: runner)
+                }
+            }
+        }
+
+        // Right under the numbers, so "Test Again" doesn't sit below every
+        // result card.
+        actionButton
+    }
+
+    /// The detail cards shown once a run has finished.
+    @ViewBuilder
+    private func resultSections(_ result: TestResult) -> some View {
+        // No quality card when a metric the scoring needs went unmeasured:
+        // better a missing card than a grade we can't stand behind.
+        if let quality = result.quality {
+            qualitySection(quality)
+        }
+        serverSection(result.meta)
+        latencySection(result)
     }
 
     /// Tells VoiceOver what the run is doing at each step — but not the 5 Hz

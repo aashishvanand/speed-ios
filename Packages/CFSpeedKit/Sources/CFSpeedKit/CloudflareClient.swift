@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Thin wrapper around Cloudflare's public speed-test endpoints
 /// (speed.cloudflare.com/__down, /__up, /meta, /cdn-cgi/trace).
@@ -98,24 +99,57 @@ final class CloudflareClient: Sendable {
         return result ?? nil
     }
 
-    /// Single round-trip latency probe: GET /__down?bytes=0. TTFB is the RTT
-    /// to the edge.
+    /// Single round-trip latency probe: GET /__down?bytes=0.
+    ///
+    /// Measured the way speed.cloudflare.com measures it: request start to
+    /// response start, minus the server processing time the edge reports in
+    /// Server-Timing. Using the task's own metrics excludes DNS, TCP and TLS
+    /// setup, so the first probe on a new connection isn't inflated by two or
+    /// three extra round trips. Falls back to wall-clock time if the system
+    /// reports no metrics.
     ///
     /// Throws rather than returning nil: this is the first request a run
-    /// makes, so its `URLError` is what tells us *why* a test can't proceed
-    /// (offline vs. blocked vs. timing out). Swallowing it here is what left
-    /// the app unable to distinguish those cases.
+    /// makes, so its `URLError` is what tells the runner *why* a test can't
+    /// proceed (offline vs. blocked vs. timing out).
     func probeLatencyMs(timeout: TimeInterval = 5) async throws -> Double {
-        let url = downURL(bytes: 0)
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: downURL(bytes: 0))
         request.timeoutInterval = timeout
+        let metrics = ProbeMetrics()
         let start = DispatchTime.now()
-        let (_, response) = try await session.data(for: request)
+        let (_, response) = try await session.data(for: request, delegate: metrics)
         let elapsedNs = DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds
         // A fast 403 or 429 is not a round trip to a working edge.
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         guard http.isSuccess else { throw HTTPStatusError(statusCode: http.statusCode) }
-        return Double(elapsedNs) / 1_000_000.0
+        let totalMs = metrics.requestToResponse.map { $0 * 1000 } ?? Double(elapsedNs) / 1_000_000.0
+        // The edge spends tens of milliseconds generating each response, often
+        // several times the network round trip itself. It reports that time in
+        // Server-Timing, and speed.cloudflare.com subtracts it; so do we.
+        let serverMs = Self.serverProcessingMs(serverTiming: http.value(forHTTPHeaderField: "Server-Timing"))
+        return max(totalMs - serverMs, 0)
+    }
+
+    /// Total server-side processing time, in milliseconds, from a
+    /// Server-Timing header such as `cfSpeedEdge;dur=3, cfSpeedWorker;dur=15`.
+    ///
+    /// Sums the `dur` of Cloudflare's speed-test entries (`cfSpeed*`, and the
+    /// older `cfRequestDuration`). Other entries are ignored: `cfL4`, for
+    /// example, describes the TCP connection, not time spent on the request.
+    /// Returns 0 when the header is missing or has no usable entry.
+    static func serverProcessingMs(serverTiming: String?) -> Double {
+        guard let serverTiming else { return 0 }
+        var total = 0.0
+        for entry in serverTiming.split(separator: ",") {
+            let params = entry.split(separator: ";").map { $0.trimmingCharacters(in: .whitespaces) }
+            guard let name = params.first,
+                  name.hasPrefix("cfSpeed") || name == "cfRequestDuration" else { continue }
+            for param in params.dropFirst() where param.hasPrefix("dur=") {
+                if let ms = Double(param.dropFirst(4)), ms.isFinite, ms >= 0 {
+                    total += ms
+                }
+            }
+        }
+        return total
     }
 
     func meta(from response: URLResponse) -> NetworkMeta {
@@ -192,6 +226,24 @@ final class CloudflareClient: Sendable {
             latitude: response.colo?.lat,
             longitude: response.colo?.lon
         )
+    }
+}
+
+/// Captures one probe's request-start to response-start interval.
+private final class ProbeMetrics: NSObject, URLSessionTaskDelegate, Sendable {
+    private let interval = OSAllocatedUnfairLock<TimeInterval?>(initialState: nil)
+
+    /// Nil when the system reported no usable timestamps.
+    var requestToResponse: TimeInterval? { interval.withLock { $0 } }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics) {
+        // The last transaction is the one that produced the response (earlier
+        // ones would be redirects).
+        guard let transaction = metrics.transactionMetrics.last,
+              let requestStart = transaction.requestStartDate,
+              let responseStart = transaction.responseStartDate,
+              responseStart >= requestStart else { return }
+        interval.withLock { $0 = responseStart.timeIntervalSince(requestStart) }
     }
 }
 

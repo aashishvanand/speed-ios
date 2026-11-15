@@ -112,3 +112,30 @@ struct HistoryCodeTests {
         #expect(ConnectionType(rawValue: "Wi-Fi") == nil)
     }
 }
+
+@Suite("Server-Timing parsing")
+struct ServerTimingTests {
+    @Test("Sums Cloudflare's speed-test entries")
+    func sumsSpeedEntries() {
+        #expect(CloudflareClient.serverProcessingMs(serverTiming: "cfSpeedEdge;dur=3, cfSpeedWorker;dur=15") == 18)
+    }
+
+    @Test("Ignores the connection-level cfL4 entry")
+    func ignoresL4() {
+        let header = #"cfSpeedEdge;dur=3, cfSpeedWorker;dur=20, cfL4;desc="?proto=TCP&rtt=4022&min_rtt=4009""#
+        #expect(CloudflareClient.serverProcessingMs(serverTiming: header) == 23)
+    }
+
+    @Test("Understands the older cfRequestDuration entry")
+    func legacyEntry() {
+        #expect(CloudflareClient.serverProcessingMs(serverTiming: "cfRequestDuration;dur=12.5") == 12.5)
+    }
+
+    @Test("Missing, unrelated or malformed headers count as zero")
+    func zeroCases() {
+        #expect(CloudflareClient.serverProcessingMs(serverTiming: nil) == 0)
+        #expect(CloudflareClient.serverProcessingMs(serverTiming: "") == 0)
+        #expect(CloudflareClient.serverProcessingMs(serverTiming: "db;dur=50, app;dur=10") == 0)
+        #expect(CloudflareClient.serverProcessingMs(serverTiming: "cfSpeedEdge;dur=abc, cfSpeedWorker;dur=-4") == 0)
+    }
+}

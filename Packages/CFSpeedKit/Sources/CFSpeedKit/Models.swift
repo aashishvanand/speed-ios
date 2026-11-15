@@ -1,12 +1,23 @@
 import Foundation
 
+/// Where a test ran: the client's public address and network, and the
+/// Cloudflare data center ("colo") that served it.
+///
+/// Assembled from several best-effort sources (response headers,
+/// `/cdn-cgi/trace`, `/meta`, `/locations`), so any field may be missing.
 public struct NetworkMeta: Sendable, Equatable {
     public var clientIP: String?
+    /// IATA-style code of the serving data center, e.g. "SIN".
     public var colo: String?
+    /// City of the serving data center.
     public var city: String?
+    /// ISO 3166-1 alpha-2 country code.
     public var country: String?
+    /// The client's autonomous system number, without the "AS" prefix.
     public var asn: String?
+    /// The organization that owns `asn`, typically the ISP.
     public var ispName: String?
+    /// Coordinates of the serving data center, for the map.
     public var latitude: Double?
     public var longitude: Double?
 
@@ -25,6 +36,7 @@ public struct NetworkMeta: Sendable, Equatable {
         clientIP == nil && colo == nil && city == nil && country == nil && asn == nil
     }
 
+    /// Fills each missing field from `other`; fields already set win.
     mutating func merge(_ other: NetworkMeta) {
         clientIP = clientIP ?? other.clientIP
         colo = colo ?? other.colo
@@ -37,12 +49,16 @@ public struct NetworkMeta: Sendable, Equatable {
     }
 }
 
+/// Statistics over a batch of round-trip latency probes, in milliseconds.
 public struct LatencySummary: Sendable, Equatable {
+    /// Mean absolute difference between consecutive samples, in the order
+    /// they were taken (the definition speed.cloudflare.com uses).
     public var jitterMs: Double
     public var minMs: Double
     public var avgMs: Double
     public var medianMs: Double
     public var maxMs: Double
+    /// Raw samples in the order they were taken.
     public var samples: [Double]
 
     public init(jitterMs: Double, minMs: Double, avgMs: Double, medianMs: Double, maxMs: Double, samples: [Double]) {
@@ -54,6 +70,8 @@ public struct LatencySummary: Sendable, Equatable {
         self.samples = samples
     }
 
+    /// Summarizes `samples`, or returns nil when there are none, so callers
+    /// can't mistake "unmeasured" for a real 0 ms.
     public init?(samples: [Double]) {
         guard !samples.isEmpty else { return nil }
         let sorted = samples.sorted()
@@ -71,7 +89,12 @@ public struct LatencySummary: Sendable, Equatable {
     }
 }
 
+/// Result of one throughput phase. The percentile figures cover only the
+/// steady-state samples, after ramp-up is discarded (see `summarize`).
+/// The app reports `p90Mbps` as the headline number, as speed.cloudflare.com
+/// does.
 public struct ThroughputSummary: Sendable, Equatable {
+    /// Every byte moved during the phase, ramp-up included.
     public var bytes: UInt64
     public var durationSeconds: Double
     public var meanMbps: Double
@@ -80,6 +103,7 @@ public struct ThroughputSummary: Sendable, Equatable {
     public var p75Mbps: Double
     public var p90Mbps: Double
 
+    /// A phase that moved nothing.
     public static let zero = ThroughputSummary(bytes: 0, durationSeconds: 0, meanMbps: 0, medianMbps: 0, p25Mbps: 0, p75Mbps: 0, p90Mbps: 0)
 
     public init(bytes: UInt64, durationSeconds: Double, meanMbps: Double, medianMbps: Double, p25Mbps: Double, p75Mbps: Double, p90Mbps: Double) {
@@ -93,8 +117,11 @@ public struct ThroughputSummary: Sendable, Equatable {
     }
 }
 
+/// Where a run is. A run moves forward through these in order and ends in
+/// `.finished` or `.failed`; `cancel()` returns it to `.idle`.
 public enum TestPhase: Sendable, Equatable {
     case idle
+    /// Set synchronously on `start()`, before the first request goes out.
     case connecting
     case latency
     case download
@@ -125,6 +152,7 @@ public enum TestFailure: Sendable, Equatable {
     /// The edge answered, but with an HTTP error — typically 429 (rate
     /// limited) or 403 (blocked by a network filter).
     case rejected(statusCode: Int)
+    /// Anything else, carrying the system's description.
     case unknown(String)
 
     public init(_ error: URLError) {
@@ -206,6 +234,7 @@ public enum TestFailure: Sendable, Equatable {
     }
 }
 
+/// The five grades speed.cloudflare.com shows for each network experience.
 public enum QualityGrade: String, Sendable, Equatable {
     case bad = "Bad"
     case poor = "Poor"
@@ -243,13 +272,13 @@ public struct NetworkQuality: Sendable, Equatable {
     ///   - loadedLatencyIncreaseMs: max(loaded download latency, loaded upload latency) − unloaded latency.
     ///     `nil` when the loaded-latency probes returned nothing, which makes
     ///     the whole score unavailable — see below.
-    ///   - packetLoss: fraction 0...1; pass 0 when unmeasured (matches the JS engine's own fallback).
+    ///   - packetLoss: fraction 0...1. This engine doesn't measure packet
+    ///     loss (it needs a TURN server), so callers pass 0, which is also
+    ///     what Cloudflare's JS engine falls back to.
     ///
-    /// Fails when loaded-latency increase wasn't measured. All three
-    /// experiences weight it, and every threshold table here is ascending
-    /// "lower is better", so substituting 0 for an unmeasured metric scores
-    /// it as *ideal* rather than unknown — which is how a run with no
-    /// loaded-latency samples at all used to grade out as Great.
+    /// Returns nil when the loaded-latency increase wasn't measured. All
+    /// three experiences weight it, and in these tables lower is better, so
+    /// substituting 0 would score a missing measurement as ideal.
     ///
     /// Note: none of Cloudflare's three published experiences (streaming,
     /// gaming, rtc) factor in upload bandwidth at all — only download does,
@@ -284,6 +313,7 @@ public struct NetworkQuality: Sendable, Equatable {
     }
 }
 
+/// Everything a completed run measured.
 public struct TestResult: Sendable, Equatable {
     public var meta: NetworkMeta
     public var idleLatency: LatencySummary
@@ -316,22 +346,25 @@ public struct TestResult: Sendable, Equatable {
     }
 }
 
-public enum SpeedTestEvent: Sendable, Equatable {
-    case phaseChanged(TestPhase)
-    case metaUpdated(NetworkMeta)
-    case throughputTick(phase: TestPhase, mbpsInstant: Double, bytesTotal: UInt64)
-    case latencyTick(phase: TestPhase, ms: Double)
-    case finished(TestResult)
-}
-
+/// Tunables for a run. `.default` matches what the apps ship with; every
+/// value is clamped by `sanitized()` before use.
 public struct SpeedTestConfig: Sendable {
+    /// Must be HTTPS; anything else falls back to speed.cloudflare.com.
     public var baseURL: URL
+    /// Parallel transfer workers per throughput phase.
     public var concurrency: Int
+    /// Phases are fixed-duration, not fixed-size, so a run takes the same
+    /// time on a 10 Mbps link as on a 10 Gbps one.
     public var downloadDuration: TimeInterval
     public var uploadDuration: TimeInterval
+    /// Size each worker requests per download. Large enough that a worker
+    /// spends its time transferring rather than starting requests; a
+    /// transfer still running at the deadline is cancelled mid-stream.
     public var downloadBytesPerRequest: Int
     public var uploadBytesPerRequest: Int
+    /// Sequential probes in the unloaded (idle) latency batch.
     public var idleLatencyProbeCount: Int
+    /// How often throughput is sampled; also the live graph's tick rate.
     public var sampleInterval: TimeInterval
 
     public static let `default` = SpeedTestConfig(

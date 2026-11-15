@@ -21,6 +21,35 @@ jobs:
         # so CI never sends speed-test traffic.
         run: swift test
 
+  engine-simulators:
+    name: CFSpeedKit tests (${{ matrix.platform }})
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: iOS
+            device: iPhone
+          - platform: tvOS
+            device: Apple TV
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run unit tests
+        working-directory: Packages/CFSpeedKit
+        # Use whichever matching simulator the runner image ships rather than
+        # hard-coding a model name that changes between Xcode releases.
+        run: |
+          id=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          rt = "${{ matrix.platform }}"
+          devs = json.load(sys.stdin)["devices"]
+          ids = [d["udid"] for k, v in sorted(devs.items(), reverse=True) if f".{rt}-" in k
+                 for d in v if d["name"].startswith("${{ matrix.device }}")]
+          print(ids[0])')
+          xcodebuild test \
+            -scheme CFSpeedKit \
+            -destination "platform=${{ matrix.platform }} Simulator,id=$id"
+
   apps:
     name: Build ${{ matrix.scheme }}
     runs-on: macos-26

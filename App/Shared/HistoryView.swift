@@ -100,20 +100,24 @@ struct HistoryView: View {
 
     private func row(_ entry: TestHistoryEntry) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label(entry.connectionType.displayName, systemImage: connectionIcon(entry.connectionType))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(entry.date, format: .dateTime.month().day().year().hour().minute())
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+            // Connection and date side by side, stacked at large text sizes
+            // rather than breaking words like "Ethernet" mid-word.
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    connectionLabel(entry).fixedSize()
+                    Spacer()
+                    dateText(entry).fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    connectionLabel(entry)
+                    dateText(entry).fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             // Side by side when they fit, stacked at large text sizes.
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 18) { metrics(entry) }
-                VStack(alignment: .leading, spacing: 4) { metrics(entry) }
+                VStack(alignment: .leading, spacing: 4) { metrics(entry, fixed: false) }
             }
 
             if let isp = entry.ispName, !isp.isEmpty {
@@ -127,20 +131,44 @@ struct HistoryView: View {
     }
 
     @ViewBuilder
-    private func metrics(_ entry: TestHistoryEntry) -> some View {
-        metric(icon: "arrow.down.circle", name: "Download", value: SpeedFormat.text(entry.downloadMbps))
-        metric(icon: "arrow.up.circle", name: "Upload", value: SpeedFormat.text(entry.uploadMbps))
-        metric(icon: "timer", name: "Latency", value: String(format: "%.0f ms", entry.pingMs))
+    private func metrics(_ entry: TestHistoryEntry, fixed: Bool = true) -> some View {
+        metric(icon: "arrow.down.circle", name: "Download", value: SpeedFormat.text(entry.downloadMbps), fixed: fixed)
+        metric(icon: "arrow.up.circle", name: "Upload", value: SpeedFormat.text(entry.uploadMbps), fixed: fixed)
+        metric(icon: "timer", name: "Latency", value: String(format: "%.0f ms", entry.pingMs), fixed: fixed)
     }
 
-    private func metric(icon: String, name: String, value: String) -> some View {
-        Label(value, systemImage: icon)
-            .font(.subheadline.weight(.medium))
-            .monospacedDigit()
-            // The icon alone means nothing to VoiceOver: "Download, 100 Mbps".
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(name)
-            .accessibilityValue(value)
+    private func connectionLabel(_ entry: TestHistoryEntry) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: connectionIcon(entry.connectionType))
+            Text(entry.connectionType.displayName)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+    }
+
+    private func dateText(_ entry: TestHistoryEntry) -> some View {
+        Text(entry.date, format: .dateTime.month().day().year().hour().minute())
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+    }
+
+    private func metric(icon: String, name: String, value: String, fixed: Bool) -> some View {
+        // Plain HStack rather than Label: fixed at its ideal size so a value
+        // like "2.45 Gbps" never wraps mid-value. If the row is too narrow,
+        // ViewThatFits falls back to the stacked layout instead.
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .foregroundStyle(.tint)
+            Text(value)
+        }
+        .font(.subheadline.weight(.medium))
+        .monospacedDigit()
+        // Stacked rows (the last resort) may wrap rather than overflow.
+        .fixedSize(horizontal: fixed, vertical: fixed)
+        // The icon alone means nothing to VoiceOver: "Download, 100 Mbps".
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(name)
+        .accessibilityValue(value)
     }
 
     private func connectionIcon(_ type: ConnectionType) -> String {
