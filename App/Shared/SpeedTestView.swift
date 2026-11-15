@@ -62,6 +62,8 @@ struct SpeedTestView: View {
                     .padding(20)
                     .padding(.top, 12)
                 }
+                // Screenshot mode's "details" scene opens on the cards below the fold.
+                .defaultScrollAnchor(ScreenshotDemo.scene == .details ? .bottom : .top)
                 .onGeometryChange(for: CGFloat.self) { proxy in
                     proxy.size.width
                 } action: { width in
@@ -88,13 +90,20 @@ struct SpeedTestView: View {
             // unmetered link; on cellular or Low Data Mode it waits for a tap.
             guard resolved, !didConsiderAutoStart else { return }
             didConsiderAutoStart = true
+            #if DEBUG
+            if let scene = ScreenshotDemo.scene {
+                ScreenshotDemo.apply(scene, to: runner)
+                showHistory = scene == .history
+                return
+            }
+            #endif
             if runner.phase == .idle, connectivity.allowsAutomaticTest {
                 runner.start()
             }
         }
         .onChange(of: runner.phase) { oldPhase, newPhase in
             announce(newPhase, from: oldPhase)
-            guard newPhase == .finished, let result = runner.result else { return }
+            guard newPhase == .finished, let result = runner.result, !ScreenshotDemo.isActive else { return }
             saveHistoryEntry(for: result)
         }
         .onChange(of: connectivity.isOnline) { _, isOnline in
@@ -102,7 +111,7 @@ struct SpeedTestView: View {
             // wants a result, so pick the test back up rather than making
             // them notice the connection returned and tap again — as long as
             // the link it came back on isn't metered.
-            guard isOnline, case .failed = runner.phase, connectivity.allowsAutomaticTest else { return }
+            guard isOnline, case .failed = runner.phase, connectivity.allowsAutomaticTest, !ScreenshotDemo.isActive else { return }
             runner.start()
         }
         .onChange(of: scenePhase) { _, newPhase in

@@ -110,6 +110,23 @@ public final class SpeedTestRunner {
         if isRunning { phase = .idle }
     }
 
+    #if DEBUG
+    /// Screenshot hook: puts the runner into a given state without any
+    /// network traffic, so App Store screenshots show representative numbers
+    /// and no real IP address. Compiled out of release builds.
+    public func showDemoState(phase: TestPhase, result: TestResult?, downloadSamples: [Double], uploadSamples: [Double], latencyMs: Double) {
+        cancel()
+        self.result = result
+        self.meta = result?.meta ?? NetworkMeta()
+        self.downloadSamples = downloadSamples
+        self.uploadSamples = uploadSamples
+        self.downloadMbps = downloadSamples.last ?? 0
+        self.uploadMbps = uploadSamples.last ?? 0
+        self.latencyMs = latencyMs
+        self.phase = phase
+    }
+    #endif
+
     /// True while `id` is still the run the UI is showing.
     private func isCurrent(_ id: Int) -> Bool {
         id == currentRunID && !Task.isCancelled
