@@ -36,7 +36,7 @@ targets:
       base:
         PRODUCT_NAME: Edge Speed
         PRODUCT_MODULE_NAME: CFSpeed
-        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.ios
+        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: 6.0
         CODE_SIGN_STYLE: Automatic
@@ -60,7 +60,7 @@ targets:
       base:
         PRODUCT_NAME: Edge Speed
         PRODUCT_MODULE_NAME: CFSpeed
-        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.tvos
+        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed
         SWIFT_VERSION: 6.0
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
@@ -88,7 +88,7 @@ targets:
       base:
         PRODUCT_NAME: Edge Speed
         PRODUCT_MODULE_NAME: CFSpeed
-        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.macos
+        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed
         SWIFT_VERSION: 6.0
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

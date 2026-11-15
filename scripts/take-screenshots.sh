@@ -61,10 +61,10 @@ ios_device() { # label simulator-name last-scene
   xcrun simctl status_bar "$udid" override --time 9:41 --dataNetwork wifi --wifiMode active \
     --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
   mkdir -p "$OUT/$1"; rm -f "$OUT/$1"/*.png
-  shoot "$udid" me.aashishvanand.speed.ios - "$OUT/$1" 1 result light
-  shoot "$udid" me.aashishvanand.speed.ios - "$OUT/$1" 2 download light
-  shoot "$udid" me.aashishvanand.speed.ios - "$OUT/$1" 3 history light
-  shoot "$udid" me.aashishvanand.speed.ios - "$OUT/$1" 4 "$3" dark
+  shoot "$udid" me.aashishvanand.speed - "$OUT/$1" 1 result light
+  shoot "$udid" me.aashishvanand.speed - "$OUT/$1" 2 download light
+  shoot "$udid" me.aashishvanand.speed - "$OUT/$1" 3 history light
+  shoot "$udid" me.aashishvanand.speed - "$OUT/$1" 4 "$3" dark
   xcrun simctl status_bar "$udid" clear
   xcrun simctl ui "$udid" appearance light
 }
@@ -77,8 +77,8 @@ tv_device() {
   xcrun simctl install "$udid" "$DERIVED/Build/Products/Debug-appletvsimulator/Edge Speed.app"
   mkdir -p "$OUT/appletv"; rm -f "$OUT/appletv"/*.png
   # tvOS is dark-first; the light gradient reads poorly on a TV.
-  shoot "$udid" me.aashishvanand.speed.tvos - "$OUT/appletv" 1 result dark
-  shoot "$udid" me.aashishvanand.speed.tvos - "$OUT/appletv" 2 download dark
+  shoot "$udid" me.aashishvanand.speed - "$OUT/appletv" 1 result dark
+  shoot "$udid" me.aashishvanand.speed - "$OUT/appletv" 2 download dark
 }
 
 mac() {
