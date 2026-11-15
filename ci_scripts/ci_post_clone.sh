@@ -1,10 +1,11 @@
 #!/bin/sh
-# Xcode Cloud post-clone step. The Xcode project is generated from
-# project.yml by XcodeGen and isn't committed, so generate it here, before
-# Xcode Cloud resolves packages and builds.
+# Xcode Cloud post-clone step. CFSpeed.xcodeproj is generated from project.yml
+# by XcodeGen. It's committed so Xcode Cloud's workflow editor can see the
+# schemes, but regenerate it here anyway so a build never uses a stale project
+# if someone edited project.yml without running xcodegen.
 #
-# Xcode Cloud runs this from ci_scripts/, which must sit next to where
-# CFSpeed.xcodeproj will be (the repository root).
+# Xcode Cloud runs this from ci_scripts/, which must sit next to
+# CFSpeed.xcodeproj (the repository root).
 set -eu
 
 XCODEGEN_VERSION=2.46.0 # keep in step with the version used locally

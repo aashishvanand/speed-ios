@@ -1,0 +1,9 @@
+{
+  "id" : "94a1c345-f54e-4f4e-a662-c6a40b73c115",
+  "targets" : [
+    {
+      "id" : "9d131c57-b908-48d6-b483-7ea38671592b",
+      "name" : "CFSpeedKit"
+    }
+  ]
+}

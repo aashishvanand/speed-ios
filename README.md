@@ -69,7 +69,7 @@ App/
   CFSpeed-tvOS/      tvOS app
   CFSpeed-macOS/     macOS app (sandboxed, outgoing network only)
 Packages/CFSpeedKit/ The engine, as a Swift package with no dependencies
-project.yml          XcodeGen spec; the .xcodeproj is generated, not committed
+project.yml          XcodeGen spec; the .xcodeproj is generated from it (committed for Xcode Cloud; rerun xcodegen after editing)
 ```
 
 Key types in `CFSpeedKit`:

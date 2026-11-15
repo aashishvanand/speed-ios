@@ -4,7 +4,6 @@ DerivedData/
 *.xcuserstate
 xcuserdata/
 *.xcworkspace/xcuserdata/
-CFSpeed.xcodeproj/
 TODO.md
 
 AppStore/

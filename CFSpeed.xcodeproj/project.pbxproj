@@ -1,0 +1,654 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0AA8ADB0DE1488A4BC95A3D3 /* SpeedTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */; };
+		12CCCBA06EA027E130E242AE /* CFSpeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = FB346F0184A5A61E1480AF22 /* CFSpeedKit */; };
+		1E0616A8C8A70D8EEEB86E85 /* CFSpeedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A87AC335335B3914131F477 /* CFSpeedApp.swift */; };
+		1FA22B751853E3757ECD1826 /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */; };
+		20FFD63FFB2976F34CEA02FC /* CFSpeedMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E026518FDF4FE13AAAE70683 /* CFSpeedMacApp.swift */; };
+		29125D3F6FCB9B1178F05F05 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1FFD35E5744D7122C59A7F /* HistoryView.swift */; };
+		2F906D6242579D1EF5DEFF95 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1FFD35E5744D7122C59A7F /* HistoryView.swift */; };
+		3D471BDAA32BDD1D99FD6202 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BABDF3F25A4304578C12C203 /* Assets.xcassets */; };
+		453401CBDD98D9C8FC5F2712 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */; };
+		4584161FDCBFD75B1C6D8E7E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */; };
+		52261CA1C2495ABE300EE30D /* SpeedTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */; };
+		60516832D35C2F433EA542E2 /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */; };
+		67FD2E4B825B9DE97DC77BC7 /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */; };
+		71C9E82DBC8953658F69CE24 /* CFSpeedTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16F890A89FF77612EC5B021C /* CFSpeedTVApp.swift */; };
+		80F0A850A39F8E179566AE0E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 943537C74065BB776F0A445E /* Assets.xcassets */; };
+		943784BBAF394FE8644921B7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07B0916C1D8D1DF996C79618 /* Assets.xcassets */; };
+		A73343BD48391F4326F54B8D /* CFSpeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3F9CBD908118ACF1AF9CA51A /* CFSpeedKit */; };
+		B6AFEC092A84371CC77A6890 /* CFSpeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8DBE1112C131A97A8DEB1DC3 /* CFSpeedKit */; };
+		B8A4273AA977DE11983082B3 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1FFD35E5744D7122C59A7F /* HistoryView.swift */; };
+		C7F24DF74C4E61223A2452B2 /* SpeedTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */; };
+		F6C923267C418375F2ECBABA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		07B0916C1D8D1DF996C79618 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		16F890A89FF77612EC5B021C /* CFSpeedTVApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CFSpeedTVApp.swift; sourceTree = "<group>"; };
+		1C405416EA9DD371F472B37A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		1C656CA4196B470CD413AADD /* CFSpeed-tvOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "CFSpeed-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		28D35E584CC6643465F4DDA1 /* CFSpeedKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CFSpeedKit; path = Packages/CFSpeedKit; sourceTree = SOURCE_ROOT; };
+		50E4D374039158F450537E85 /* CFSpeed-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "CFSpeed-macOS.entitlements"; sourceTree = "<group>"; };
+		7A87AC335335B3914131F477 /* CFSpeedApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CFSpeedApp.swift; sourceTree = "<group>"; };
+		7B1FFD35E5744D7122C59A7F /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotDemo.swift; sourceTree = "<group>"; };
+		8F0762BC35DC4F68E1BE1108 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		943537C74065BB776F0A445E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		98845D449B405E1ACC6B5CC3 /* CFSpeed-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CFSpeed-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AC8251B1B43826A0A5A0C733 /* CFSpeed.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CFSpeed.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BABDF3F25A4304578C12C203 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTestView.swift; sourceTree = "<group>"; };
+		DF22289D611ABA80D7A010AE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E026518FDF4FE13AAAE70683 /* CFSpeedMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CFSpeedMacApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		426F457733B2DA624E952568 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				12CCCBA06EA027E130E242AE /* CFSpeedKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A0DE97105427E5FB6CD26A7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B6AFEC092A84371CC77A6890 /* CFSpeedKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF204E01680C7959732B1DCF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A73343BD48391F4326F54B8D /* CFSpeedKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		15F9EFCAA185028E9B9767E9 /* CFSpeed */ = {
+			isa = PBXGroup;
+			children = (
+				943537C74065BB776F0A445E /* Assets.xcassets */,
+				7A87AC335335B3914131F477 /* CFSpeedApp.swift */,
+				1C405416EA9DD371F472B37A /* Info.plist */,
+			);
+			path = CFSpeed;
+			sourceTree = "<group>";
+		};
+		68F431BB225F1BC892D852C7 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				15F9EFCAA185028E9B9767E9 /* CFSpeed */,
+				E83D39E4D5BDA50E756DADDA /* CFSpeed-macOS */,
+				C77692F64B1DCDD3F3B12DE1 /* CFSpeed-tvOS */,
+				70A2D5C3A8AC114BAEE43D0A /* Shared */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		70A2D5C3A8AC114BAEE43D0A /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				7B1FFD35E5744D7122C59A7F /* HistoryView.swift */,
+				119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */,
+				821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */,
+				C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		7F7946105EC717F1F8F4E6E9 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				28D35E584CC6643465F4DDA1 /* CFSpeedKit */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		A610B9B334869D1BF2221176 = {
+			isa = PBXGroup;
+			children = (
+				68F431BB225F1BC892D852C7 /* App */,
+				7F7946105EC717F1F8F4E6E9 /* Packages */,
+				EF58F197325106330D62BD27 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C77692F64B1DCDD3F3B12DE1 /* CFSpeed-tvOS */ = {
+			isa = PBXGroup;
+			children = (
+				BABDF3F25A4304578C12C203 /* Assets.xcassets */,
+				16F890A89FF77612EC5B021C /* CFSpeedTVApp.swift */,
+				8F0762BC35DC4F68E1BE1108 /* Info.plist */,
+			);
+			path = "CFSpeed-tvOS";
+			sourceTree = "<group>";
+		};
+		E83D39E4D5BDA50E756DADDA /* CFSpeed-macOS */ = {
+			isa = PBXGroup;
+			children = (
+				07B0916C1D8D1DF996C79618 /* Assets.xcassets */,
+				50E4D374039158F450537E85 /* CFSpeed-macOS.entitlements */,
+				E026518FDF4FE13AAAE70683 /* CFSpeedMacApp.swift */,
+				DF22289D611ABA80D7A010AE /* Info.plist */,
+			);
+			path = "CFSpeed-macOS";
+			sourceTree = "<group>";
+		};
+		EF58F197325106330D62BD27 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				98845D449B405E1ACC6B5CC3 /* CFSpeed-macOS.app */,
+				1C656CA4196B470CD413AADD /* CFSpeed-tvOS.app */,
+				AC8251B1B43826A0A5A0C733 /* CFSpeed.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		35B48491C241D42416094C35 /* CFSpeed-tvOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D004DD3D9F08D2365C19DC56 /* Build configuration list for PBXNativeTarget "CFSpeed-tvOS" */;
+			buildPhases = (
+				805159AB5E7C7A5CC8965F22 /* Sources */,
+				1E8F05CD5E6D58663FFCC1FA /* Resources */,
+				426F457733B2DA624E952568 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "CFSpeed-tvOS";
+			packageProductDependencies = (
+				FB346F0184A5A61E1480AF22 /* CFSpeedKit */,
+			);
+			productName = "CFSpeed-tvOS";
+			productReference = 1C656CA4196B470CD413AADD /* CFSpeed-tvOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		66C9ACC2FAC9657F3F70C32E /* CFSpeed */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A8E83428EDD74358B2BD34F /* Build configuration list for PBXNativeTarget "CFSpeed" */;
+			buildPhases = (
+				C2ED6CC2CE8917B0F7DD39CB /* Sources */,
+				72E41A795B0EDEAFEEE42D5F /* Resources */,
+				FF204E01680C7959732B1DCF /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CFSpeed;
+			packageProductDependencies = (
+				3F9CBD908118ACF1AF9CA51A /* CFSpeedKit */,
+			);
+			productName = CFSpeed;
+			productReference = AC8251B1B43826A0A5A0C733 /* CFSpeed.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9D308B4FAB5B3861BDF3AF84 /* CFSpeed-macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F8795A8EF1CF99275B4C7350 /* Build configuration list for PBXNativeTarget "CFSpeed-macOS" */;
+			buildPhases = (
+				B09F4BEF37C7850600062C7B /* Sources */,
+				AA6CA437AB9508822A7E7ECA /* Resources */,
+				7A0DE97105427E5FB6CD26A7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "CFSpeed-macOS";
+			packageProductDependencies = (
+				8DBE1112C131A97A8DEB1DC3 /* CFSpeedKit */,
+			);
+			productName = "CFSpeed-macOS";
+			productReference = 98845D449B405E1ACC6B5CC3 /* CFSpeed-macOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2D6B9E312C7B3DA262F35D32 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					35B48491C241D42416094C35 = {
+						DevelopmentTeam = 67Z8KU7B9Q;
+						ProvisioningStyle = Automatic;
+					};
+					66C9ACC2FAC9657F3F70C32E = {
+						DevelopmentTeam = 67Z8KU7B9Q;
+						ProvisioningStyle = Automatic;
+					};
+					9D308B4FAB5B3861BDF3AF84 = {
+						DevelopmentTeam = 67Z8KU7B9Q;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 71B6731C4407734B7B5795B0 /* Build configuration list for PBXProject "CFSpeed" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = A610B9B334869D1BF2221176;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9F3FA85BBA14A1440015384A /* XCLocalSwiftPackageReference "Packages/CFSpeedKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = EF58F197325106330D62BD27 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				66C9ACC2FAC9657F3F70C32E /* CFSpeed */,
+				35B48491C241D42416094C35 /* CFSpeed-tvOS */,
+				9D308B4FAB5B3861BDF3AF84 /* CFSpeed-macOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1E8F05CD5E6D58663FFCC1FA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3D471BDAA32BDD1D99FD6202 /* Assets.xcassets in Resources */,
+				453401CBDD98D9C8FC5F2712 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		72E41A795B0EDEAFEEE42D5F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				80F0A850A39F8E179566AE0E /* Assets.xcassets in Resources */,
+				4584161FDCBFD75B1C6D8E7E /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA6CA437AB9508822A7E7ECA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				943784BBAF394FE8644921B7 /* Assets.xcassets in Resources */,
+				F6C923267C418375F2ECBABA /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		805159AB5E7C7A5CC8965F22 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				71C9E82DBC8953658F69CE24 /* CFSpeedTVApp.swift in Sources */,
+				B8A4273AA977DE11983082B3 /* HistoryView.swift in Sources */,
+				67FD2E4B825B9DE97DC77BC7 /* ScreenshotDemo.swift in Sources */,
+				0AA8ADB0DE1488A4BC95A3D3 /* SpeedTestView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B09F4BEF37C7850600062C7B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				20FFD63FFB2976F34CEA02FC /* CFSpeedMacApp.swift in Sources */,
+				2F906D6242579D1EF5DEFF95 /* HistoryView.swift in Sources */,
+				1FA22B751853E3757ECD1826 /* ScreenshotDemo.swift in Sources */,
+				52261CA1C2495ABE300EE30D /* SpeedTestView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C2ED6CC2CE8917B0F7DD39CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E0616A8C8A70D8EEEB86E85 /* CFSpeedApp.swift in Sources */,
+				29125D3F6FCB9B1178F05F05 /* HistoryView.swift in Sources */,
+				60516832D35C2F433EA542E2 /* ScreenshotDemo.swift in Sources */,
+				C7F24DF74C4E61223A2452B2 /* SpeedTestView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		7ADE9AF2AE90D7B298234868 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TVOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		A2F208EE690840371A04EF6E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "App/CFSpeed-macOS/CFSpeed-macOS.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = "App/CFSpeed-macOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed;
+				PRODUCT_MODULE_NAME = CFSpeed;
+				PRODUCT_NAME = "Edge Speed";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AC6A83BBFA10DE6C986CB75D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "App/CFSpeed-macOS/CFSpeed-macOS.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = "App/CFSpeed-macOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed;
+				PRODUCT_MODULE_NAME = CFSpeed;
+				PRODUCT_NAME = "Edge Speed";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		C1309B4060013EE0B9ADFFC8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				INFOPLIST_FILE = "App/CFSpeed-tvOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed;
+				PRODUCT_MODULE_NAME = CFSpeed;
+				PRODUCT_NAME = "Edge Speed";
+				SDKROOT = appletvos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Release;
+		};
+		CB3FA28DEC90927A97DFA455 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				INFOPLIST_FILE = App/CFSpeed/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed;
+				PRODUCT_MODULE_NAME = CFSpeed;
+				PRODUCT_NAME = "Edge Speed";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E2A808F1FE6BAFA0BF99E87D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				INFOPLIST_FILE = App/CFSpeed/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed;
+				PRODUCT_MODULE_NAME = CFSpeed;
+				PRODUCT_NAME = "Edge Speed";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		ED04B4765CBC863DB2D29F78 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TVOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		F17C40A102F2714AF54C989F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				INFOPLIST_FILE = "App/CFSpeed-tvOS/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed;
+				PRODUCT_MODULE_NAME = CFSpeed;
+				PRODUCT_NAME = "Edge Speed";
+				SDKROOT = appletvos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5A8E83428EDD74358B2BD34F /* Build configuration list for PBXNativeTarget "CFSpeed" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB3FA28DEC90927A97DFA455 /* Debug */,
+				E2A808F1FE6BAFA0BF99E87D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		71B6731C4407734B7B5795B0 /* Build configuration list for PBXProject "CFSpeed" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ED04B4765CBC863DB2D29F78 /* Debug */,
+				7ADE9AF2AE90D7B298234868 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D004DD3D9F08D2365C19DC56 /* Build configuration list for PBXNativeTarget "CFSpeed-tvOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F17C40A102F2714AF54C989F /* Debug */,
+				C1309B4060013EE0B9ADFFC8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F8795A8EF1CF99275B4C7350 /* Build configuration list for PBXNativeTarget "CFSpeed-macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC6A83BBFA10DE6C986CB75D /* Debug */,
+				A2F208EE690840371A04EF6E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		9F3FA85BBA14A1440015384A /* XCLocalSwiftPackageReference "Packages/CFSpeedKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/CFSpeedKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3F9CBD908118ACF1AF9CA51A /* CFSpeedKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CFSpeedKit;
+		};
+		8DBE1112C131A97A8DEB1DC3 /* CFSpeedKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CFSpeedKit;
+		};
+		FB346F0184A5A61E1480AF22 /* CFSpeedKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CFSpeedKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 2D6B9E312C7B3DA262F35D32 /* Project object */;
+}
