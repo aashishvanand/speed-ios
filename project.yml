@@ -34,11 +34,13 @@ targets:
           - UIInterfaceOrientationLandscapeRight
     settings:
       base:
-        PRODUCT_NAME: CFSpeed
+        PRODUCT_NAME: Edge Speed
+        PRODUCT_MODULE_NAME: CFSpeed
         PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.ios
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: 6.0
         CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         DEVELOPMENT_TEAM: 67Z8KU7B9Q
     dependencies:
       - package: CFSpeedKit
@@ -56,10 +58,12 @@ targets:
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:
-        PRODUCT_NAME: CFSpeed
+        PRODUCT_NAME: Edge Speed
+        PRODUCT_MODULE_NAME: CFSpeed
         PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.tvos
         SWIFT_VERSION: 6.0
         CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         DEVELOPMENT_TEAM: 67Z8KU7B9Q
     dependencies:
       - package: CFSpeedKit
@@ -82,10 +86,12 @@ targets:
         com.apple.security.network.client: true
     settings:
       base:
-        PRODUCT_NAME: CFSpeed
+        PRODUCT_NAME: Edge Speed
+        PRODUCT_MODULE_NAME: CFSpeed
         PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.macos
         SWIFT_VERSION: 6.0
         CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         DEVELOPMENT_TEAM: 67Z8KU7B9Q
         MACOSX_DEPLOYMENT_TARGET: "26.0"
         ENABLE_HARDENED_RUNTIME: true
