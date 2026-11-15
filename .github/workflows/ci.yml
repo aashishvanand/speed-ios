@@ -1,9 +1,11 @@
 name: CI
 
+# Pull requests only: pushes to dev don't run CI, and releases are built by
+# Xcode Cloud from the testflight branch (see ci_scripts/). Run it by hand
+# from the Actions tab when needed.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}

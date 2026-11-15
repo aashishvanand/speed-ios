@@ -1,6 +1,6 @@
-# CFSpeed
+# Edge Speed
 
-[![CI](https://github.com/aashishvanand/speed-ios/actions/workflows/ci.yml/badge.svg)](https://github.com/aashishvanand/speed-ios/actions/workflows/ci.yml)
+[![CI](https://github.com/aashishvanand/speed-ios/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/aashishvanand/speed-ios/actions/workflows/ci.yml)
 
 A native internet speed test for iPhone, iPad, Apple TV and Mac, built on the
 public [speed.cloudflare.com](https://speed.cloudflare.com) endpoints. It
@@ -121,13 +121,36 @@ It's skipped unless you opt in:
 CF_SPEEDTEST_LIVE=1 swift test --filter SpeedTestRunnerIntegrationTests
 ```
 
-CI runs the engine tests on macOS, iOS and tvOS, and builds all three apps.
+GitHub Actions runs the engine tests on macOS, iOS and tvOS, and builds all
+three apps, on every pull request (not on pushes to `dev`).
+
+## Branches and releases
+
+- `dev`: day-to-day work. Pushes don't trigger any CI.
+- `testflight`: release branch. Xcode Cloud archives the iOS, tvOS and macOS
+  apps from each push and uploads them to TestFlight. To ship a build:
+  `git push origin dev:testflight`.
+- `website`: the privacy, terms and support pages, deployed as a Cloudflare
+  Worker.
+
+Xcode Cloud doesn't run XcodeGen itself, so `ci_scripts/ci_post_clone.sh`
+generates `CFSpeed.xcodeproj` (with a pinned XcodeGen version) before it builds.
 
 ## Privacy
 
 The app has no analytics, no tracking and no account. Measurement traffic goes
 only to speed.cloudflare.com; the server map is drawn by Apple Maps. Test
-history stays on the device.
+history stays on the device. See the [privacy policy](https://speed-ios-website.aashishvanand.workers.dev/privacy)
+and [terms of use](https://speed-ios-website.aashishvanand.workers.dev/terms). The site's
+source is on the [`website`](../../tree/website) branch, deployed as a Cloudflare Worker.
+
+## Publishing
+
+`AppStore/README.md` (local only, gitignored) has the store listing,
+privacy-label and review answers.
+`scripts/generate-icons.swift` draws every app icon, and
+`scripts/take-screenshots.sh` captures store screenshots from a Debug-only
+demo mode (`-demo result|download|details|history`) with sample data.
 
 ## Acknowledgments
 
