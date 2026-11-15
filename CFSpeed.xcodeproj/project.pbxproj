@@ -232,15 +232,15 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					35B48491C241D42416094C35 = {
-						DevelopmentTeam = 67Z8KU7B9Q;
+						DevelopmentTeam = 3MQ39BXGKV;
 						ProvisioningStyle = Automatic;
 					};
 					66C9ACC2FAC9657F3F70C32E = {
-						DevelopmentTeam = 67Z8KU7B9Q;
+						DevelopmentTeam = 3MQ39BXGKV;
 						ProvisioningStyle = Automatic;
 					};
 					9D308B4FAB5B3861BDF3AF84 = {
-						DevelopmentTeam = 67Z8KU7B9Q;
+						DevelopmentTeam = 3MQ39BXGKV;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -400,7 +400,7 @@
 				CODE_SIGN_ENTITLEMENTS = "App/CFSpeed-macOS/CFSpeed-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "App/CFSpeed-macOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -423,7 +423,7 @@
 				CODE_SIGN_ENTITLEMENTS = "App/CFSpeed-macOS/CFSpeed-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "App/CFSpeed-macOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -445,7 +445,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
 				INFOPLIST_FILE = "App/CFSpeed-tvOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -466,7 +466,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
 				INFOPLIST_FILE = App/CFSpeed/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -487,7 +487,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
 				INFOPLIST_FILE = App/CFSpeed/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -572,7 +572,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 67Z8KU7B9Q;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
 				INFOPLIST_FILE = "App/CFSpeed-tvOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
