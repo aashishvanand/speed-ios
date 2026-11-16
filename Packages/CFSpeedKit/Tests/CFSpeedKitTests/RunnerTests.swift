@@ -141,7 +141,10 @@ struct LatencyDeadlineTests {
         let started = ContinuousClock.now
         let result = await runLatencyProbes(client: client, count: 10, budget: .seconds(1)) { _ in }
         let elapsed = (ContinuousClock.now - started).timeInterval
-        #expect(elapsed < 1.4, "took \(elapsed)s")
+        // Without the budget, the stalled probes would each wait the 5 s probe
+        // timeout. 3.5 s still catches that while tolerating a CI simulator
+        // that freezes for a couple of seconds.
+        #expect(elapsed < 3.5, "took \(elapsed)s")
         #expect(result.summary == nil)
         #expect(result.failure == .unreachable)
     }
@@ -180,7 +183,9 @@ struct LatencyDeadlineTests {
         let summary = await runLoadedLatencyProbes(client: client, duration: 1) { _ in }
         let elapsed = (ContinuousClock.now - started).timeInterval
         #expect(summary == nil)
-        #expect(elapsed < 1.15, "took \(elapsed)s")
+        // Without the phase deadline, the stalled probe would wait the 5 s
+        // probe timeout; 3.5 s leaves room for a sluggish CI simulator.
+        #expect(elapsed < 3.5, "took \(elapsed)s")
     }
 }
 

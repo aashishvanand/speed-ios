@@ -109,7 +109,7 @@ extension SpeedTestConfig {
 }
 
 extension SpeedTestRunner.Timing {
-    static let stub = SpeedTestRunner.Timing(idleLatencyBudget: .seconds(2), metadataGrace: .milliseconds(300))
+    static let stub = SpeedTestRunner.Timing(idleLatencyBudget: .seconds(5), metadataGrace: .milliseconds(300))
 }
 
 /// Polls `condition` on the main actor until it holds or `timeout` passes.

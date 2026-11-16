@@ -1,10 +1,10 @@
 name: CI
 
-# Pull requests only: pushes to dev don't run CI, and releases are built by
-# Xcode Cloud from the testflight branch (see ci_scripts/). Run it by hand
-# from the Actions tab when needed.
+# Manual only. This repo is private, so macOS runner minutes come out of the
+# monthly Actions allowance at 10x the Linux rate. Releases are built by Xcode
+# Cloud from the testflight branch (see ci_scripts/). Run this by hand from
+# the Actions tab when you want a full check across all platforms.
 on:
-  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -48,6 +48,10 @@ jobs:
           ids = [d["udid"] for k, v in sorted(devs.items(), reverse=True) if f".{rt}-" in k
                  for d in v if d["name"].startswith("${{ matrix.device }}")]
           print(ids[0])')
+          # Boot first: a simulator still booting freezes the first seconds of
+          # the test run and trips the timing assertions.
+          xcrun simctl boot "$id" || true
+          xcrun simctl bootstatus "$id" -b
           xcodebuild test \
             -scheme CFSpeedKit \
             -destination "platform=${{ matrix.platform }} Simulator,id=$id"
