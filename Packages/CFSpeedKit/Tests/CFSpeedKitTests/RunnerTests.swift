@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Testing
 @testable import CFSpeedKit
 
@@ -146,17 +147,24 @@ struct LatencyDeadlineTests {
     }
 
     @Test("The idle batch doesn't sleep after its final probe")
-    func noTrailingSleep() async {
+    func noTrailingSleep() async throws {
         let baseURL = StubServer().install()
         defer { StubServer.uninstall(baseURL) }
         let client = CloudflareClient(baseURL: baseURL, protocolClasses: [StubProtocol.self])
         defer { client.invalidate() }
 
-        let started = ContinuousClock.now
-        let result = await runLatencyProbes(client: client, count: 1, budget: .seconds(5)) { _ in }
-        let elapsed = (ContinuousClock.now - started).timeInterval
+        // Time from the final sample to the return, not the whole call: the
+        // probe itself (connection setup on a busy CI simulator) can take far
+        // longer than the 100 ms pause this is checking for.
+        let lastSample = OSAllocatedUnfairLock<ContinuousClock.Instant?>(initialState: nil)
+        let result = await runLatencyProbes(client: client, count: 1, budget: .seconds(5)) { _ in
+            lastSample.withLock { $0 = .now }
+        }
+        let returned = ContinuousClock.now
         #expect(result.summary?.samples.count == 1)
-        #expect(elapsed < 0.09, "took \(elapsed)s")
+        let sampled = try #require(lastSample.withLock { $0 })
+        let tail = (returned - sampled).timeInterval
+        #expect(tail < 0.08, "returned \(tail)s after the last sample")
     }
 
     @Test("Loaded probes end with their phase, even mid-probe")
