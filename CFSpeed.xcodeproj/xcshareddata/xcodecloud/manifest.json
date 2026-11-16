@@ -2,6 +2,10 @@
   "id" : "94a1c345-f54e-4f4e-a662-c6a40b73c115",
   "targets" : [
     {
+      "id" : "4e76de80-1dcd-40cf-b129-e5f5a0d604b7",
+      "name" : "CFSpeed"
+    },
+    {
       "id" : "9d131c57-b908-48d6-b483-7ea38671592b",
       "name" : "CFSpeedKit"
     }
