@@ -46,9 +46,19 @@ boot() { # udid
 shoot() { # udid bundle-id app-path out-dir index scene appearance
   local udid=$1 bundle=$2 out=$4/$(printf %02d "$5")-$6-$7.png
   xcrun simctl ui "$udid" appearance "$7" 2>/dev/null || true # unsupported on tvOS
-  xcrun simctl launch --terminate-running-process "$udid" "$bundle" -demo "$6" >/dev/null
-  sleep 6 # map tiles, sheet animation
-  xcrun simctl io "$udid" screenshot --type=png "$out" >/dev/null
+  local attempt
+  for attempt in 1 2 3; do
+    xcrun simctl launch --terminate-running-process "$udid" "$bundle" -demo "$6" >/dev/null
+    sleep 6 # map tiles, sheet animation
+    xcrun simctl io "$udid" screenshot --type=png "$out" >/dev/null
+    # The simulator occasionally captures a frame where nothing but the
+    # system clock has drawn; relaunching recovers, a second capture of
+    # the same session does not.
+    if swift scripts/verify-screenshot.swift "$out" >/dev/null 2>&1; then
+      break
+    fi
+    echo "  $out: blank capture on attempt $attempt, retrying" >&2
+  done
   echo "  $out"
 }
 
@@ -79,6 +89,7 @@ tv_device() {
   # tvOS is dark-first; the light gradient reads poorly on a TV.
   shoot "$udid" me.aashishvanand.speed - "$OUT/appletv" 1 result dark
   shoot "$udid" me.aashishvanand.speed - "$OUT/appletv" 2 download dark
+  shoot "$udid" me.aashishvanand.speed - "$OUT/appletv" 3 history dark
 }
 
 mac() {

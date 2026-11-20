@@ -45,4 +45,52 @@ struct HistoryStoreTests {
         let first = try #require(try fresh.fetch(oldest).first)
         #expect(first.date == Date(timeIntervalSince1970: 1_000_000 + 3))
     }
+
+    private func temporaryStoreURL() throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "HistoryStoreTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appending(path: "history.store")
+    }
+
+    @Test func migratesAVersionOneStore() throws {
+        let url = try temporaryStoreURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        do {
+            let v1 = Schema(versionedSchema: HistorySchemaV1.self)
+            let container = try ModelContainer(for: v1, configurations: ModelConfiguration(schema: v1, url: url, cloudKitDatabase: .none))
+            let context = ModelContext(container)
+            context.insert(HistorySchemaV1.TestHistoryEntry(
+                date: Date(timeIntervalSince1970: 1_000_000), downloadMbps: 100, uploadMbps: 50,
+                pingMs: 10, jitterMs: 1.5, ispName: "Old ISP", connectionTypeRaw: "wifi"
+            ))
+            try context.save()
+        }
+        let container = try HistoryStore.open(at: url)
+        let entries = try ModelContext(container).fetch(FetchDescriptor<TestHistoryEntry>())
+        #expect(entries.count == 1)
+        #expect(entries.first?.jitterMs == 1.5)
+        #expect(entries.first?.connectionType == .wifi)
+    }
+
+    @Test func storesMissingJitter() throws {
+        let container = HistoryStore.previewContainer()
+        let context = container.mainContext
+        HistoryStore.record(TestHistoryEntry(downloadMbps: 1, uploadMbps: 1, pingMs: 1, jitterMs: nil, ispName: nil, connectionType: .wifi), in: context)
+        let saved = try ModelContext(container).fetch(FetchDescriptor<TestHistoryEntry>())
+        #expect(saved.first?.jitterMs == nil)
+    }
+
+    @Test func replacesAnUnreadableStore() throws {
+        let url = try temporaryStoreURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        try Data("not a database".utf8).write(to: url)
+
+        let container = try #require(HistoryStore.openRecovering(at: url))
+        #expect(HistoryHealth.shared.didResetUnreadableStore)
+        // The bad file is kept beside the new store, not deleted.
+        #expect(FileManager.default.fileExists(atPath: url.path + ".unreadable"))
+        // And the new store works.
+        HistoryStore.record(entry(0), in: container.mainContext)
+        #expect(try count(ModelContext(container)) == 1)
+    }
 }

@@ -55,6 +55,7 @@ public final class SpeedTestRunner {
     @ObservationIgnored private var currentRunID = 0
     @ObservationIgnored private var runTask: Task<Void, Never>?
     @ObservationIgnored private var metadataTask: Task<Void, Never>?
+    @ObservationIgnored private var locationsTask: Task<Void, Never>?
     @ObservationIgnored private var eventTask: Task<Void, Never>?
 
     /// Metadata from /cdn-cgi/trace + /meta, and from the first download's
@@ -103,9 +104,11 @@ public final class SpeedTestRunner {
         currentRunID += 1
         runTask?.cancel()
         metadataTask?.cancel()
+        locationsTask?.cancel()
         eventTask?.cancel()
         runTask = nil
         metadataTask = nil
+        locationsTask = nil
         eventTask = nil
         if isRunning { phase = .idle }
     }
@@ -180,6 +183,13 @@ public final class SpeedTestRunner {
             return
         }
 
+        // The colo list is the largest metadata body (tens of KB), so it
+        // waits until the idle probes are done rather than sharing the link
+        // with them. It only feeds the map, which appears with the result.
+        let locationsTask = Task { [weak self] () -> Void in await self?.loadLocations(client, runID: id) }
+        self.locationsTask = locationsTask
+        defer { locationsTask.cancel() }
+
         phase = .download
         async let downloadResult = runDownloadPhase(client: client, config: config) { meta in
             sink.yield(.headerMeta(meta))
@@ -224,8 +234,10 @@ public final class SpeedTestRunner {
         let graceTimer = Task {
             try? await Task.sleep(for: grace)
             metadataTask.cancel()
+            locationsTask.cancel()
         }
         await metadataTask.value
+        await locationsTask.value
         graceTimer.cancel()
         // Drain any ticks still queued so none lands after the final values.
         sink.finish()
@@ -274,19 +286,24 @@ public final class SpeedTestRunner {
     private func loadMetadata(_ client: CloudflareClient, runID: Int) async {
         async let trace = client.fetchTrace()
         async let info = client.fetchMetaInfo()
-        #if os(tvOS)
-        // tvOS shows no map, so the colo coordinate list is dead weight.
-        let locations: [ColoLocation] = []
-        #else
-        let locations = await Self.locations(using: client)
-        #endif
         var fetched = await trace
         fetched.merge(await info)
 
         guard isCurrent(runID) else { return }
         self.fetchedMeta = fetched
+        recomputeMeta()
+    }
+
+    private func loadLocations(_ client: CloudflareClient, runID: Int) async {
+        #if os(tvOS)
+        // tvOS shows no map, so the colo coordinate list is dead weight.
+        return
+        #else
+        let locations = await Self.locations(using: client)
+        guard isCurrent(runID) else { return }
         self.locations = locations
         recomputeMeta()
+        #endif
     }
 
     private static func locations(using client: CloudflareClient) async -> [ColoLocation] {

@@ -1,6 +1,6 @@
 # Edge Speed
 
-[![CI](https://github.com/aashishvanand/speed-ios/actions/workflows/ci.yml/badge.svg?event=pull_request)](https://github.com/aashishvanand/speed-ios/actions/workflows/ci.yml)
+[![CI](https://github.com/aashishvanand/speed-ios/actions/workflows/ci.yml/badge.svg)](https://github.com/aashishvanand/speed-ios/actions/workflows/ci.yml)
 
 A native internet speed test for iPhone, iPad, Apple TV and Mac, built on the
 public [speed.cloudflare.com](https://speed.cloudflare.com) endpoints. It
@@ -22,7 +22,9 @@ scoring.
 - **Clear failures.** Offline, data not allowed, captive portal, rate limited
   and dropped connection are each reported as such, never as a 0 Mbps result.
 - **Data-aware.** A test starts on its own only on an unmetered connection
-  without Low Data Mode. A tap always works.
+  without Low Data Mode, and automatic starts can be turned off entirely
+  (Options → Start Tests Automatically). Each result shows how much data the
+  run used. A tap always works.
 - **Local history.** The last 200 results, stored on the device only.
 - **Accessible.** VoiceOver labels and announcements, Dynamic Type up to the
   largest accessibility sizes, and Reduce Motion.
@@ -42,7 +44,9 @@ engine, [cloudflare/speedtest](https://github.com/cloudflare/speedtest).
 
 - **Headline number.** Throughput is sampled every 200 ms. The first 20% of each
   phase (at least 1 s) is dropped as TCP ramp-up, and the 90th percentile of the
-  remaining samples is reported, as speed.cloudflare.com does.
+  remaining samples is reported. speed.cloudflare.com also reports a 90th
+  percentile, but over per-request measurements rather than time slices, so
+  the two can differ.
 - **Jitter.** The mean absolute difference between consecutive idle-latency
   samples.
 - **Quality grades.** A direct port of the AIM scoring tables in
@@ -121,20 +125,57 @@ It's skipped unless you opt in:
 CF_SPEEDTEST_LIVE=1 swift test --filter SpeedTestRunnerIntegrationTests
 ```
 
-GitHub Actions runs the engine tests on macOS, iOS and tvOS, and builds all
-three apps, on every pull request (not on pushes to `dev`).
+UI tests (from the `CFSpeedUITests` / `CFSpeedTVUITests` targets) cover the
+accessibility tree, landscape, Dynamic Type, swipe-to-delete, and — with the
+simulated remote — tvOS focus scrolling and the long-press delete menu. They
+run in the Debug demo scenes, so they too send no network traffic. Run them
+locally against a booted simulator:
+
+```bash
+xcodebuild test -project CFSpeed.xcodeproj -scheme CFSpeed \
+  -destination 'platform=iOS Simulator,name=iPhone 17e'
+xcodebuild test -project CFSpeed.xcodeproj -scheme CFSpeed-tvOS \
+  -destination 'platform=tvOS Simulator,name=Apple TV 4K (4th generation)'
+```
+
+Xcode Cloud runs the engine tests before every release archive
+(`ci_scripts/ci_pre_xcodebuild.sh`), and a failure stops the build. The GitHub
+Actions workflow, which runs the engine tests on macOS, iOS and tvOS and builds
+all three apps, is manual only: start it from the Actions tab.
+
+## Localization
+
+The UI is English-only for now, with `App/Shared/Localizable.xcstrings` (shared
+by all three app targets) as the hook for translations. It already holds every
+static UI string. The status-line strings and the engine's failure titles are
+composed at runtime and stay English until a second language is added. Refresh
+the catalog after adding or changing UI strings:
+
+```bash
+xcodebuild -exportLocalizations -project CFSpeed.xcodeproj \
+  -localizationPath <somewhere-temporary> -exportLanguage en
+```
 
 ## Branches and releases
 
 - `dev`: day-to-day work. Pushes don't trigger any CI.
 - `testflight`: release branch. Xcode Cloud archives the iOS, tvOS and macOS
-  apps from each push and uploads them to TestFlight. To ship a build:
-  `git push origin dev:testflight`.
+  apps from each push and uploads them to TestFlight. To ship a build, open
+  a pull request from `dev` into `testflight`
+  (`gh pr create --base testflight --head dev`) and merge it. Xcode Cloud runs
+  the engine tests before archiving; run the GitHub workflow by hand first if
+  you want the full cross-platform check.
+  A direct `git push origin dev:testflight` is rejected after the first
+  merge, because `testflight` then has merge commits that `dev` lacks.
 - `website`: the privacy, terms and support pages, deployed as a Cloudflare
   Worker.
 
 Xcode Cloud doesn't run XcodeGen itself, so `ci_scripts/ci_post_clone.sh`
-generates `CFSpeed.xcodeproj` (with a pinned XcodeGen version) before it builds.
+generates `CFSpeed.xcodeproj` before it builds, with a pinned XcodeGen release
+whose SHA-256 is checked before it runs. The GitHub workflow uses the same script.
+
+The version and build number for all three apps are `MARKETING_VERSION` and
+`CURRENT_PROJECT_VERSION` in `project.yml`.
 
 ## Privacy
 

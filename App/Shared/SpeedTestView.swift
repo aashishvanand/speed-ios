@@ -13,6 +13,23 @@ struct SpeedTestView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showHistory = false
+    /// Whether a test starts by itself: on launch, on return from the
+    /// background, and when the network comes back after a dropped run. A
+    /// full test can move a gigabyte or more each way on a fast link, so
+    /// people on capped plans the OS can't see (home, satellite, a phone
+    /// hotspot that isn't flagged as one) can turn that off.
+    @AppStorage("startsAutomatically") private var startsAutomatically = true
+    /// A full test on a link the OS flags as costing money or being kept
+    /// down (cellular, a hotspot, Low Data Mode) moves as much data as the
+    /// link can carry. Auto-start already refuses those links; this is the
+    /// same caution for the deliberate tap, and anyone on a plan where the
+    /// data doesn't matter can turn it off.
+    @AppStorage("warnsBeforeMeteredTest") private var warnsBeforeMeteredTest = true
+    /// A manual tap parked on the metered-link confirmation.
+    @State private var confirmingMeteredStart = false
+    /// Shown only on request: a TV in a shared room and screen shares
+    /// shouldn't put the address on display.
+    @State private var revealsIP = false
     /// The launch-time automatic run is attempted once per launch, as soon as
     /// the network path is known.
     @State private var didConsiderAutoStart = false
@@ -75,12 +92,47 @@ struct SpeedTestView: View {
                     Button {
                         showHistory = true
                     } label: {
+                        // A real Label even on tvOS: the nav bar names items
+                        // from the Label title and ignores explicit
+                        // accessibility labels, so icon-only items would
+                        // read as the symbol's auto-description ("Clock
+                        // with a counterclockwise triangle-headed arrow…").
+                        // The title truncates behind an open sheet, a
+                        // cosmetic quirk noted in TODO.
                         Label("History", systemImage: "clock.arrow.circlepath")
+                    }
+                }
+                ToolbarItem(placement: historyButtonPlacement) {
+                    Menu {
+                        Toggle("Start Tests Automatically", isOn: $startsAutomatically)
+                        Toggle("Warn on Metered Networks", isOn: $warnsBeforeMeteredTest)
+                        #if !os(tvOS)
+                        Section("Not affiliated with Cloudflare") {
+                            Link("Privacy Policy", destination: URL(string: "https://speed-ios-website.aashishvanand.workers.dev/privacy")!)
+                        }
+                        #endif
+                    } label: {
+                        Label("Options", systemImage: "ellipsis.circle")
                     }
                 }
             }
             .sheet(isPresented: $showHistory) {
                 HistoryView()
+                    #if os(macOS)
+                    // A List has no ideal size, so without this the sheet
+                    // opens at whatever minimum macOS picks.
+                    .frame(minWidth: 460, idealWidth: 520, minHeight: 480, idealHeight: 600)
+                    #endif
+            }
+            .confirmationDialog(
+                "This network may be metered",
+                isPresented: $confirmingMeteredStart,
+                titleVisibility: .visible
+            ) {
+                Button("Start Test") { runner.start() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("A full test moves as much data as this link can carry for about 16 seconds — up to around 1 GB each way on a very fast connection, far less at typical cellular speeds.")
             }
         }
         .onChange(of: connectivity.hasResolvedPath, initial: true) { _, resolved in
@@ -97,7 +149,7 @@ struct SpeedTestView: View {
                 return
             }
             #endif
-            if runner.phase == .idle, connectivity.allowsAutomaticTest {
+            if runner.phase == .idle, startsAutomatically, connectivity.allowsAutomaticTest {
                 runner.start()
             }
         }
@@ -110,8 +162,11 @@ struct SpeedTestView: View {
             // Coming back online after a failed run is the moment the user
             // wants a result, so pick the test back up rather than making
             // them notice the connection returned and tap again — as long as
-            // the link it came back on isn't metered.
-            guard isOnline, case .failed = runner.phase, connectivity.allowsAutomaticTest, !ScreenshotDemo.isActive else { return }
+            // the link it came back on isn't metered, and the failure is one
+            // a returning network fixes. Retrying a 429 at once would only
+            // make the rate limit worse.
+            guard isOnline, case .failed(let failure) = runner.phase, failure.allowsAutomaticRetry,
+                  startsAutomatically, connectivity.allowsAutomaticTest, !ScreenshotDemo.isActive else { return }
             runner.start()
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -120,10 +175,14 @@ struct SpeedTestView: View {
                 // Suspended transfers keep counting wall-clock time, so a run
                 // that resumes would finish with a bogus (low) number and
                 // save it to history. Abandon it and start clean on return.
+                // macOS doesn't suspend a hidden or minimized app, so there
+                // the run carries on.
+                #if !os(macOS)
                 if runner.isRunning {
                     runner.cancel()
                     resumeWhenActive = true
                 }
+                #endif
             case .active:
                 // Only pick the run back up where an automatic start would be
                 // allowed: it may have begun on Wi-Fi and be coming back on
@@ -131,7 +190,7 @@ struct SpeedTestView: View {
                 // subtitle explains why.
                 if resumeWhenActive {
                     resumeWhenActive = false
-                    if connectivity.allowsAutomaticTest {
+                    if startsAutomatically, connectivity.allowsAutomaticTest {
                         runner.start()
                     }
                 }
@@ -202,7 +261,7 @@ struct SpeedTestView: View {
         case .upload: text = "Testing upload speed"
         case .finished:
             guard let result = runner.result else { return }
-            text = "Test complete. Download \(SpeedFormat.text(result.download.p90Mbps)), upload \(SpeedFormat.text(result.upload.p90Mbps)), latency \(Int(result.idleLatency.medianMs.rounded())) milliseconds."
+            text = "Test complete. Download \(SpeedFormat.text(result.download.p90Mbps)), upload \(SpeedFormat.text(result.upload.p90Mbps)), latency \(SpeedFormat.number(result.idleLatency.medianMs, fractionDigits: 0)) milliseconds."
         case .failed(let failure):
             text = "Test failed. \(failure.title)."
         case .idle:
@@ -259,12 +318,17 @@ struct SpeedTestView: View {
                 .contentTransition(reduceMotion ? .identity : .opacity)
                 .animation(reduceMotion ? nil : .easeInOut, value: titleText)
                 .accessibilityAddTraits(.isHeader)
-            Text(statusText)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .contentTransition(reduceMotion ? .identity : .opacity)
-                .animation(reduceMotion ? nil : .easeInOut, value: statusText)
+            // Re-evaluated every minute so "Measured 5 min ago" keeps up on a
+            // Mac or Apple TV left open.
+            TimelineView(.everyMinute) { context in
+                let text = statusText(now: context.date)
+                Text(text)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .contentTransition(reduceMotion ? .identity : .opacity)
+                    .animation(reduceMotion ? nil : .easeInOut, value: text)
+            }
         }
     }
 
@@ -320,13 +384,17 @@ struct SpeedTestView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// The system colors are tuned for dark backgrounds; yellow and orange
+    /// text on light glass falls well under 4.5:1. In light mode use darker
+    /// shades that clear it on white, and keep the system colors in dark.
     private func gradeColor(_ grade: QualityGrade) -> Color {
+        let light = colorScheme == .light
         switch grade {
-        case .great: return .green
-        case .good: return .blue
-        case .average: return .yellow
-        case .poor: return .orange
-        case .bad: return .red
+        case .great: return light ? Color(red: 0.11, green: 0.48, blue: 0.20) : .green
+        case .good: return light ? Color(red: 0.00, green: 0.35, blue: 0.72) : .blue
+        case .average: return light ? Color(red: 0.55, green: 0.40, blue: 0.00) : .yellow
+        case .poor: return light ? Color(red: 0.70, green: 0.28, blue: 0.00) : .orange
+        case .bad: return light ? Color(red: 0.75, green: 0.10, blue: 0.10) : .red
         }
     }
 
@@ -343,13 +411,15 @@ struct SpeedTestView: View {
                     )
                     .frame(height: 150)
                     .clipShape(.rect(cornerRadius: 18))
+                    // Decorative: the rows below say the same in words.
+                    .accessibilityHidden(true)
                 }
                 #endif
 
                 infoRow(label: "Server", value: serverLocationText(meta))
                 if let country = meta.country {
                     Divider()
-                    infoRow(label: "Country", value: country)
+                    infoRow(label: "Country", value: Locale.current.localizedString(forRegionCode: country) ?? country)
                 }
                 if meta.ispName != nil || meta.asn != nil {
                     Divider()
@@ -357,10 +427,30 @@ struct SpeedTestView: View {
                 }
                 if let ip = meta.clientIP {
                     Divider()
-                    infoRow(label: "Your IP", value: ip)
+                    ipRow(ip)
                 }
             }
         }
+    }
+
+    private func ipRow(_ ip: String) -> some View {
+        AdaptiveRow {
+            Text("Your IP").foregroundStyle(.secondary)
+        } value: {
+            Button(revealsIP ? ip : "Show") {
+                revealsIP.toggle()
+            }
+            #if os(tvOS)
+            .buttonStyle(.plain)
+            #else
+            .buttonStyle(.borderless)
+            #endif
+        }
+        .font(.subheadline)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Your IP")
+        .accessibilityValue(revealsIP ? ip : "Hidden")
+        .accessibilityHint(revealsIP ? "Hides the address" : "Shows the address")
     }
 
     private func networkText(_ meta: NetworkMeta) -> String {
@@ -410,15 +500,21 @@ struct SpeedTestView: View {
             Text(label).foregroundStyle(.secondary)
         } value: {
             if let summary {
-                Text(String(format: "%.1f ms avg · %.1f ms jitter", summary.avgMs, summary.jitterMs))
+                Text(latencyText(summary))
                     .monospacedDigit()
             } else {
                 Text("Not measured")
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
         }
         .font(.subheadline)
         .accessibilityElement(children: .combine)
+    }
+
+    private func latencyText(_ summary: LatencySummary) -> String {
+        let average = "\(SpeedFormat.milliseconds(summary.avgMs, fractionDigits: 1)) avg"
+        guard let jitter = summary.jitterMs else { return average }
+        return "\(average) · \(SpeedFormat.milliseconds(jitter, fractionDigits: 1)) jitter"
     }
 
     // MARK: - Shared card container
@@ -432,6 +528,11 @@ struct SpeedTestView: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassEffect(.regular, in: .rect(cornerRadius: 24))
+        #if os(tvOS)
+        // A tvOS ScrollView only scrolls to focusable content, so without
+        // this the cards below the fold can't be reached with the remote.
+        .focusable()
+        #endif
     }
 
     // MARK: - Action button
@@ -450,7 +551,7 @@ struct SpeedTestView: View {
             .buttonStyle(.glass)
             .padding(.horizontal, 40)
         } else {
-            Button(action: runner.start) {
+            Button(action: requestStart) {
                 Text(actionButtonTitle)
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 24)
@@ -458,6 +559,25 @@ struct SpeedTestView: View {
             .buttonStyle(.glassProminent)
             .padding(.horizontal, 40)
         }
+    }
+
+    /// A deliberate tap bypasses every automatic-start guard, so metered
+    /// links get one pause before the data moves.
+    private func requestStart() {
+        if needsMeteredWarning {
+            confirmingMeteredStart = true
+        } else {
+            runner.start()
+        }
+    }
+
+    /// The OS flags cellular, personal hotspots and Low Data Mode — the
+    /// same links `allowsAutomaticTest` refuses. It can't see capped home
+    /// or satellite links, so this is a floor on which taps get warned, not
+    /// a ceiling; the result subtitle always shows the data actually used.
+    private var needsMeteredWarning: Bool {
+        warnsBeforeMeteredTest && connectivity.hasResolvedPath && connectivity.isOnline
+            && (connectivity.isExpensive || connectivity.isConstrained)
     }
 
     private var actionButtonTitle: String {
@@ -470,6 +590,17 @@ struct SpeedTestView: View {
 
     private var isRunning: Bool { runner.isRunning }
 
+    /// How to start a test, in the platform's own words.
+    private static var startPrompt: String {
+        #if os(macOS)
+        "click Start Test"
+        #elseif os(tvOS)
+        "select Start Test"
+        #else
+        "tap to test"
+        #endif
+    }
+
     /// Header title tracks the run: an invitation before, live narration
     /// during, and a summary label once results are on screen.
     private var titleText: String {
@@ -480,7 +611,7 @@ struct SpeedTestView: View {
         }
     }
 
-    private var statusText: String {
+    private func statusText(now: Date) -> String {
         switch runner.phase {
         case .idle:
             // Explain why nothing happened on launch rather than leaving the
@@ -490,15 +621,20 @@ struct SpeedTestView: View {
             }
             if didConsiderAutoStart, connectivity.hasResolvedPath, !connectivity.allowsAutomaticTest {
                 return connectivity.isConstrained
-                    ? "Low Data Mode is on — tap to test"
-                    : "On a metered connection — tap to test"
+                    ? "Low Data Mode is on — \(Self.startPrompt)"
+                    : "On a metered connection — \(Self.startPrompt)"
             }
             return "Ready to test"
         case .connecting: return "Finding the nearest server…"
         case .latency: return "Measuring latency…"
         case .download: return "Testing download speed…"
         case .upload: return "Testing upload speed…"
-        case .finished: return "Measured just now"
+        case .finished:
+            guard let result = runner.result else { return "Measured just now" }
+            let when = now.timeIntervalSince(result.date) < 60
+                ? "Measured just now"
+                : "Measured \(result.date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated)))"
+            return "\(when) · \(SpeedFormat.bytes(result.bytesTransferred)) used"
         // The card below carries the title and the explanation, so the
         // subtitle stays short rather than repeating either.
         case .failed: return "Test couldn't complete"
@@ -549,14 +685,14 @@ private struct HeroCard: View {
 
                 Text(heroLabel)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                     .shadow(color: .black.opacity(0.12), radius: 4, y: 1)
 
                 if runner.phase == .finished {
                     Text("90th percentile")
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                         .shadow(color: .black.opacity(0.1), radius: 3, y: 1)
                 }
             }
@@ -606,7 +742,9 @@ private struct HeroCard: View {
         case .connecting, .latency: return "dot.radiowaves.left.and.right"
         case .download: return "arrow.down.circle"
         case .upload: return "arrow.up.circle"
-        default: return "checkmark.circle"
+        case .finished: return "checkmark.circle"
+        // Nothing has been measured, so nothing to tick off.
+        default: return "gauge.with.needle"
         }
     }
 
@@ -624,7 +762,7 @@ private struct HeroCard: View {
         switch runner.phase {
         case .connecting, .latency:
             // Nothing measured yet reads as pending, not as a 0 ms ping.
-            return runner.latencyMs > 0 ? String(format: "%.0f", runner.latencyMs) : "—"
+            return runner.latencyMs > 0 ? SpeedFormat.number(runner.latencyMs, fractionDigits: 0) : "—"
         case .download:
             return runner.downloadSamples.isEmpty ? "—" : SpeedFormat.value(runner.downloadMbps)
         case .upload:
@@ -691,14 +829,15 @@ private struct SecondaryStatsRow: View {
 
     private var chipLatencyText: String {
         if let result = runner.result {
-            return String(format: "%.0f ms", result.idleLatency.medianMs)
+            return SpeedFormat.milliseconds(result.idleLatency.medianMs)
         }
-        return runner.latencyMs > 0 ? String(format: "%.0f ms", runner.latencyMs) : Self.pending
+        return runner.latencyMs > 0 ? SpeedFormat.milliseconds(runner.latencyMs) : Self.pending
     }
 
     private var chipJitterText: String {
-        guard let result = runner.result else { return Self.pending }
-        return String(format: "%.1f ms", result.idleLatency.jitterMs)
+        // No jitter from a single latency sample: pending, not 0 ms.
+        guard let jitter = runner.result?.idleLatency.jitterMs else { return Self.pending }
+        return SpeedFormat.milliseconds(jitter, fractionDigits: 1)
     }
 
     private func statChip(icon: String, label: String, value: String, samples: [Double] = [], graphColor: Color? = nil) -> some View {
@@ -719,7 +858,7 @@ private struct SecondaryStatsRow: View {
                     .contentTransition(reduceMotion ? .identity : .numericText())
                 Text(label)
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .padding(.vertical, 14)
