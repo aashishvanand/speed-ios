@@ -33,8 +33,10 @@ func runDownloadPhase(
         sampleInterval: config.sampleInterval,
         onTick: onTick
     ) { counter in
+        var requestBytes = config.downloadBytesPerRequest
         while !Task.isCancelled {
-            let task = client.session.dataTask(with: URLRequest(url: client.downURL(bytes: config.downloadBytesPerRequest)))
+            let task = client.session.dataTask(with: URLRequest(url: client.downURL(bytes: requestBytes)))
+            let started = ContinuousClock.now
             let delegate = TransferDelegate(direction: .download, counter: counter) { response in
                 // Only a real answer's headers describe the edge we're testing.
                 guard (response as? HTTPURLResponse)?.isSuccess == true, metaCaptured.claim() else { return }
@@ -48,6 +50,19 @@ func runDownloadPhase(
                 } else if outcome.response == nil {
                     counter.recordError()
                     try? await Task.sleep(for: .milliseconds(100))
+                } else if outcome.bytesReceived == 0 {
+                    // A 2xx with no body (a proxy answering for the edge)
+                    // returns at once; without a pause six workers would
+                    // spin on it for the whole phase.
+                    counter.recordError()
+                    try? await Task.sleep(for: .milliseconds(100))
+                } else {
+                    requestBytes = nextDownloadRequestSize(
+                        requested: requestBytes,
+                        received: outcome.bytesReceived,
+                        elapsed: (ContinuousClock.now - started).timeInterval,
+                        floor: config.downloadBytesPerRequest
+                    )
                 }
             } catch {
                 if Task.isCancelled { break }
@@ -56,6 +71,28 @@ func runDownloadPhase(
             }
         }
     }
+}
+
+/// How long a download request should ideally last. Long enough that
+/// starting the next request is a small share of a worker's time, short
+/// enough that one request is a small share of the phase.
+let targetDownloadRequestSeconds: TimeInterval = 1
+
+/// Size of a worker's next download request. On a fast link a fixed size
+/// finishes in a fraction of a second (25 MB takes 0.02 s at 10 Gbps), so
+/// per-request setup eats into the measurement; the size grows to what the
+/// last request's rate would move in `targetDownloadRequestSeconds`.
+///
+/// Grows only from a request that delivered its whole body: a short body
+/// says nothing about the link's rate. Never drops below `floor` (the
+/// configured size) or rises past `SpeedTestConfig.maxDownloadBytesPerRequest`.
+func nextDownloadRequestSize(requested: Int, received: UInt64, elapsed: TimeInterval, floor: Int) -> Int {
+    guard received >= UInt64(requested), elapsed > 0, elapsed.isFinite else { return requested }
+    let bytesPerSecond = Double(received) / elapsed
+    let target = bytesPerSecond * targetDownloadRequestSeconds
+    let ceiling = SpeedTestConfig.maxDownloadBytesPerRequest
+    guard target.isFinite else { return ceiling }
+    return min(max(Int(min(target, Double(ceiling))), floor), ceiling)
 }
 
 /// Runs `concurrency` parallel upload workers against /__up for `duration`.

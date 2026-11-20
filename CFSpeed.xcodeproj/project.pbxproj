@@ -19,25 +19,51 @@
 		4584161FDCBFD75B1C6D8E7E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */; };
 		52261CA1C2495ABE300EE30D /* SpeedTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */; };
 		60516832D35C2F433EA542E2 /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */; };
+		6689D3A2F86888A184CD93E3 /* TVRemoteUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55B2EF32E2D249AC5C6DD425 /* TVRemoteUITests.swift */; };
 		67FD2E4B825B9DE97DC77BC7 /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */; };
 		71C9E82DBC8953658F69CE24 /* CFSpeedTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16F890A89FF77612EC5B021C /* CFSpeedTVApp.swift */; };
 		80F0A850A39F8E179566AE0E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 943537C74065BB776F0A445E /* Assets.xcassets */; };
+		8C1F37F28FDEF5F3FD0BD50B /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E89D71A8D9EF678DFC6ABDD7 /* Localizable.xcstrings */; };
+		8EA3734E4E8CB97CE28D1A55 /* AccessibilityUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32B0C2B7CF307C78F4CEEAC8 /* AccessibilityUITests.swift */; };
+		8F2A74EF8A112F85F1707571 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E89D71A8D9EF678DFC6ABDD7 /* Localizable.xcstrings */; };
 		943784BBAF394FE8644921B7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07B0916C1D8D1DF996C79618 /* Assets.xcassets */; };
 		A73343BD48391F4326F54B8D /* CFSpeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3F9CBD908118ACF1AF9CA51A /* CFSpeedKit */; };
 		B6AFEC092A84371CC77A6890 /* CFSpeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8DBE1112C131A97A8DEB1DC3 /* CFSpeedKit */; };
 		B8A4273AA977DE11983082B3 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1FFD35E5744D7122C59A7F /* HistoryView.swift */; };
 		C7F24DF74C4E61223A2452B2 /* SpeedTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */; };
+		D252469FBECFDFF37392CA72 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E89D71A8D9EF678DFC6ABDD7 /* Localizable.xcstrings */; };
 		F6C923267C418375F2ECBABA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		852690B0C635BE97FCF7A742 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2D6B9E312C7B3DA262F35D32 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 66C9ACC2FAC9657F3F70C32E;
+			remoteInfo = CFSpeed;
+		};
+		C28C4DD032F1B10C1B1E09DC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2D6B9E312C7B3DA262F35D32 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 35B48491C241D42416094C35;
+			remoteInfo = "CFSpeed-tvOS";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		07B0916C1D8D1DF996C79618 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		16F890A89FF77612EC5B021C /* CFSpeedTVApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CFSpeedTVApp.swift; sourceTree = "<group>"; };
+		18B8EECA55D20E0C43A3ED58 /* CFSpeedUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CFSpeedUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1C405416EA9DD371F472B37A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1C656CA4196B470CD413AADD /* CFSpeed-tvOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "CFSpeed-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		28D35E584CC6643465F4DDA1 /* CFSpeedKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CFSpeedKit; path = Packages/CFSpeedKit; sourceTree = SOURCE_ROOT; };
+		32B0C2B7CF307C78F4CEEAC8 /* AccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityUITests.swift; sourceTree = "<group>"; };
 		50E4D374039158F450537E85 /* CFSpeed-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "CFSpeed-macOS.entitlements"; sourceTree = "<group>"; };
+		55B2EF32E2D249AC5C6DD425 /* TVRemoteUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVRemoteUITests.swift; sourceTree = "<group>"; };
+		7400C5141C96C7A553205A18 /* CFSpeedTVUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CFSpeedTVUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A87AC335335B3914131F477 /* CFSpeedApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CFSpeedApp.swift; sourceTree = "<group>"; };
 		7B1FFD35E5744D7122C59A7F /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotDemo.swift; sourceTree = "<group>"; };
@@ -49,6 +75,7 @@
 		C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTestView.swift; sourceTree = "<group>"; };
 		DF22289D611ABA80D7A010AE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		E026518FDF4FE13AAAE70683 /* CFSpeedMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CFSpeedMacApp.swift; sourceTree = "<group>"; };
+		E89D71A8D9EF678DFC6ABDD7 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +116,14 @@
 			path = CFSpeed;
 			sourceTree = "<group>";
 		};
+		25F59F2EF19ADC82DB79340F /* tvOS */ = {
+			isa = PBXGroup;
+			children = (
+				55B2EF32E2D249AC5C6DD425 /* TVRemoteUITests.swift */,
+			);
+			path = tvOS;
+			sourceTree = "<group>";
+		};
 		68F431BB225F1BC892D852C7 /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -104,6 +139,7 @@
 			isa = PBXGroup;
 			children = (
 				7B1FFD35E5744D7122C59A7F /* HistoryView.swift */,
+				E89D71A8D9EF678DFC6ABDD7 /* Localizable.xcstrings */,
 				119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */,
 				821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */,
 				C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */,
@@ -119,10 +155,28 @@
 			path = Packages;
 			sourceTree = "<group>";
 		};
+		98428EF8394B000403CB1DC7 /* AppUITests */ = {
+			isa = PBXGroup;
+			children = (
+				A5B61A7D60C43829C533C177 /* iOS */,
+				25F59F2EF19ADC82DB79340F /* tvOS */,
+			);
+			path = AppUITests;
+			sourceTree = "<group>";
+		};
+		A5B61A7D60C43829C533C177 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				32B0C2B7CF307C78F4CEEAC8 /* AccessibilityUITests.swift */,
+			);
+			path = iOS;
+			sourceTree = "<group>";
+		};
 		A610B9B334869D1BF2221176 = {
 			isa = PBXGroup;
 			children = (
 				68F431BB225F1BC892D852C7 /* App */,
+				98428EF8394B000403CB1DC7 /* AppUITests */,
 				7F7946105EC717F1F8F4E6E9 /* Packages */,
 				EF58F197325106330D62BD27 /* Products */,
 			);
@@ -155,6 +209,8 @@
 				98845D449B405E1ACC6B5CC3 /* CFSpeed-macOS.app */,
 				1C656CA4196B470CD413AADD /* CFSpeed-tvOS.app */,
 				AC8251B1B43826A0A5A0C733 /* CFSpeed.app */,
+				7400C5141C96C7A553205A18 /* CFSpeedTVUITests.xctest */,
+				18B8EECA55D20E0C43A3ED58 /* CFSpeedUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -162,6 +218,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		02CAABF00B63EF47E212EA5F /* CFSpeedUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6D76F995B9A3378AE7103828 /* Build configuration list for PBXNativeTarget "CFSpeedUITests" */;
+			buildPhases = (
+				2B810F70799900969748BE1B /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				697FAFEE75B7032F075D8B20 /* PBXTargetDependency */,
+			);
+			name = CFSpeedUITests;
+			packageProductDependencies = (
+			);
+			productName = CFSpeedUITests;
+			productReference = 18B8EECA55D20E0C43A3ED58 /* CFSpeedUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		35B48491C241D42416094C35 /* CFSpeed-tvOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D004DD3D9F08D2365C19DC56 /* Build configuration list for PBXNativeTarget "CFSpeed-tvOS" */;
@@ -181,6 +255,24 @@
 			productName = "CFSpeed-tvOS";
 			productReference = 1C656CA4196B470CD413AADD /* CFSpeed-tvOS.app */;
 			productType = "com.apple.product-type.application";
+		};
+		4C1E2B062809BCFF66EE9D9A /* CFSpeedTVUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 847872E6938F3B2CAE7C6BC4 /* Build configuration list for PBXNativeTarget "CFSpeedTVUITests" */;
+			buildPhases = (
+				C181487A54164460D660DED4 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				75AD44D41B93CA57636D9304 /* PBXTargetDependency */,
+			);
+			name = CFSpeedTVUITests;
+			packageProductDependencies = (
+			);
+			productName = CFSpeedTVUITests;
+			productReference = 7400C5141C96C7A553205A18 /* CFSpeedTVUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		66C9ACC2FAC9657F3F70C32E /* CFSpeed */ = {
 			isa = PBXNativeTarget;
@@ -231,9 +323,19 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					02CAABF00B63EF47E212EA5F = {
+						DevelopmentTeam = 3MQ39BXGKV;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 66C9ACC2FAC9657F3F70C32E;
+					};
 					35B48491C241D42416094C35 = {
 						DevelopmentTeam = 3MQ39BXGKV;
 						ProvisioningStyle = Automatic;
+					};
+					4C1E2B062809BCFF66EE9D9A = {
+						DevelopmentTeam = 3MQ39BXGKV;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 35B48491C241D42416094C35;
 					};
 					66C9ACC2FAC9657F3F70C32E = {
 						DevelopmentTeam = 3MQ39BXGKV;
@@ -265,6 +367,8 @@
 				66C9ACC2FAC9657F3F70C32E /* CFSpeed */,
 				35B48491C241D42416094C35 /* CFSpeed-tvOS */,
 				9D308B4FAB5B3861BDF3AF84 /* CFSpeed-macOS */,
+				02CAABF00B63EF47E212EA5F /* CFSpeedUITests */,
+				4C1E2B062809BCFF66EE9D9A /* CFSpeedTVUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -275,6 +379,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3D471BDAA32BDD1D99FD6202 /* Assets.xcassets in Resources */,
+				8F2A74EF8A112F85F1707571 /* Localizable.xcstrings in Resources */,
 				453401CBDD98D9C8FC5F2712 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -284,6 +389,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				80F0A850A39F8E179566AE0E /* Assets.xcassets in Resources */,
+				8C1F37F28FDEF5F3FD0BD50B /* Localizable.xcstrings in Resources */,
 				4584161FDCBFD75B1C6D8E7E /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -293,6 +399,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				943784BBAF394FE8644921B7 /* Assets.xcassets in Resources */,
+				D252469FBECFDFF37392CA72 /* Localizable.xcstrings in Resources */,
 				F6C923267C418375F2ECBABA /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -300,6 +407,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2B810F70799900969748BE1B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8EA3734E4E8CB97CE28D1A55 /* AccessibilityUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		805159AB5E7C7A5CC8965F22 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -322,6 +437,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C181487A54164460D660DED4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6689D3A2F86888A184CD93E3 /* TVRemoteUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C2ED6CC2CE8917B0F7DD39CB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -335,7 +458,60 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		697FAFEE75B7032F075D8B20 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 66C9ACC2FAC9657F3F70C32E /* CFSpeed */;
+			targetProxy = 852690B0C635BE97FCF7A742 /* PBXContainerItemProxy */;
+		};
+		75AD44D41B93CA57636D9304 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 35B48491C241D42416094C35 /* CFSpeed-tvOS */;
+			targetProxy = C28C4DD032F1B10C1B1E09DC /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		3E1074EDE7DA258169CC026E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed.tvuitests;
+				SDKROOT = appletvos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = "CFSpeed-tvOS";
+			};
+			name = Debug;
+		};
+		7960330FF8167A0B785F2715 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed.uitests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = CFSpeed;
+			};
+			name = Release;
+		};
 		7ADE9AF2AE90D7B298234868 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -370,6 +546,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -382,14 +559,37 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 				TVOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		95C998D64687C6B298DC2A32 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed.tvuitests;
+				SDKROOT = appletvos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = "CFSpeed-tvOS";
 			};
 			name = Release;
 		};
@@ -436,6 +636,26 @@
 				PRODUCT_NAME = "Edge Speed";
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		ACB36E369CA8F5E3BAC258E0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed.uitests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = CFSpeed;
 			};
 			name = Debug;
 		};
@@ -536,6 +756,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -554,12 +775,15 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TVOS_DEPLOYMENT_TARGET = 26.0;
@@ -599,11 +823,29 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		6D76F995B9A3378AE7103828 /* Build configuration list for PBXNativeTarget "CFSpeedUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACB36E369CA8F5E3BAC258E0 /* Debug */,
+				7960330FF8167A0B785F2715 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		71B6731C4407734B7B5795B0 /* Build configuration list for PBXProject "CFSpeed" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				ED04B4765CBC863DB2D29F78 /* Debug */,
 				7ADE9AF2AE90D7B298234868 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		847872E6938F3B2CAE7C6BC4 /* Build configuration list for PBXNativeTarget "CFSpeedTVUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3E1074EDE7DA258169CC026E /* Debug */,
+				95C998D64687C6B298DC2A32 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

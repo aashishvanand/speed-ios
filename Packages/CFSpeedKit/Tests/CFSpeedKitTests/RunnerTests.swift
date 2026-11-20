@@ -141,7 +141,10 @@ struct LatencyDeadlineTests {
         let started = ContinuousClock.now
         let result = await runLatencyProbes(client: client, count: 10, budget: .seconds(1)) { _ in }
         let elapsed = (ContinuousClock.now - started).timeInterval
-        #expect(elapsed < 1.4, "took \(elapsed)s")
+        // Without the budget, the stalled probes would each wait the 5 s probe
+        // timeout. 3.5 s still catches that while tolerating a CI simulator
+        // that freezes for a couple of seconds.
+        #expect(elapsed < 3.5, "took \(elapsed)s")
         #expect(result.summary == nil)
         #expect(result.failure == .unreachable)
     }
@@ -180,7 +183,9 @@ struct LatencyDeadlineTests {
         let summary = await runLoadedLatencyProbes(client: client, duration: 1) { _ in }
         let elapsed = (ContinuousClock.now - started).timeInterval
         #expect(summary == nil)
-        #expect(elapsed < 1.15, "took \(elapsed)s")
+        // Without the phase deadline, the stalled probe would wait the 5 s
+        // probe timeout; 3.5 s leaves room for a sluggish CI simulator.
+        #expect(elapsed < 3.5, "took \(elapsed)s")
     }
 }
 
@@ -254,6 +259,44 @@ struct SpeedFormatTests {
         (-3, "0.00 Mbps"),
     ])
     func formats(mbps: Double, expected: String) {
-        #expect(SpeedFormat.text(mbps) == expected)
+        #expect(SpeedFormat.text(mbps, locale: Locale(identifier: "en_US")) == expected)
+    }
+
+    @Test func followsTheRegionDecimalSeparator() {
+        let germany = Locale(identifier: "de_DE")
+        #expect(SpeedFormat.text(4.24, locale: germany) == "4,2 Mbps")
+        #expect(SpeedFormat.text(1234, locale: germany) == "1,23 Gbps")
+        #expect(SpeedFormat.milliseconds(1.64, fractionDigits: 1, locale: germany) == "1,6 ms")
+    }
+}
+
+@Suite("Download request sizing")
+struct DownloadRequestSizeTests {
+    let floor = 25_000_000
+
+    @Test func growsToAboutOneSecondOfTransfer() {
+        // 25 MB in 0.1 s is 250 MB/s, so the next request asks for ~250 MB.
+        let next = nextDownloadRequestSize(requested: floor, received: 25_000_000, elapsed: 0.1, floor: floor)
+        #expect(next == 250_000_000)
+    }
+
+    @Test func neverDropsBelowTheConfiguredSize() {
+        let next = nextDownloadRequestSize(requested: floor, received: 25_000_000, elapsed: 5, floor: floor)
+        #expect(next == floor)
+    }
+
+    @Test func shrinksBackWhenTheLinkSlows() {
+        let next = nextDownloadRequestSize(requested: 250_000_000, received: 250_000_000, elapsed: 5, floor: floor)
+        #expect(next == 50_000_000)
+    }
+
+    @Test func capsAtTheMaximum() {
+        let next = nextDownloadRequestSize(requested: floor, received: 25_000_000, elapsed: 0.000_001, floor: floor)
+        #expect(next == SpeedTestConfig.maxDownloadBytesPerRequest)
+    }
+
+    @Test func ignoresAShortBody() {
+        let next = nextDownloadRequestSize(requested: floor, received: 64 * 1024, elapsed: 0.001, floor: floor)
+        #expect(next == floor)
     }
 }

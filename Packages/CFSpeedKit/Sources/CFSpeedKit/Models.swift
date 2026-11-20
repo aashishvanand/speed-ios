@@ -52,8 +52,10 @@ public struct NetworkMeta: Sendable, Equatable {
 /// Statistics over a batch of round-trip latency probes, in milliseconds.
 public struct LatencySummary: Sendable, Equatable {
     /// Mean absolute difference between consecutive samples, in the order
-    /// they were taken (the definition speed.cloudflare.com uses).
-    public var jitterMs: Double
+    /// they were taken (the definition speed.cloudflare.com uses). `nil` with
+    /// fewer than two samples: one probe says nothing about variation, and
+    /// 0 ms would read (and score) as a perfectly stable link.
+    public var jitterMs: Double?
     public var minMs: Double
     public var avgMs: Double
     public var medianMs: Double
@@ -61,7 +63,7 @@ public struct LatencySummary: Sendable, Equatable {
     /// Raw samples in the order they were taken.
     public var samples: [Double]
 
-    public init(jitterMs: Double, minMs: Double, avgMs: Double, medianMs: Double, maxMs: Double, samples: [Double]) {
+    public init(jitterMs: Double?, minMs: Double, avgMs: Double, medianMs: Double, maxMs: Double, samples: [Double]) {
         self.jitterMs = jitterMs
         self.minMs = minMs
         self.avgMs = avgMs
@@ -80,11 +82,14 @@ public struct LatencySummary: Sendable, Equatable {
         let avg = samples.reduce(0, +) / Double(samples.count)
         let mid = sorted.count / 2
         let median = sorted.count % 2 == 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
-        var jitterSum = 0.0
-        for i in 1..<samples.count {
-            jitterSum += abs(samples[i] - samples[i - 1])
+        var jitter: Double?
+        if samples.count > 1 {
+            var jitterSum = 0.0
+            for i in 1..<samples.count {
+                jitterSum += abs(samples[i] - samples[i - 1])
+            }
+            jitter = jitterSum / Double(samples.count - 1)
         }
-        let jitter = samples.count > 1 ? jitterSum / Double(samples.count - 1) : 0
         self.init(jitterMs: jitter, minMs: min, avgMs: avg, medianMs: median, maxMs: max, samples: samples)
     }
 }
@@ -192,6 +197,17 @@ public enum TestFailure: Sendable, Equatable {
         }
     }
 
+    /// True when it's worth starting a new run by itself as soon as the
+    /// network comes back. Only for failures the network returning can fix:
+    /// retrying a 429 at once makes the rate limit worse, and a blocked or
+    /// refused test will just fail again.
+    public var allowsAutomaticRetry: Bool {
+        switch self {
+        case .offline, .interrupted: return true
+        case .dataNotAllowed, .unreachable, .rejected, .unknown: return false
+        }
+    }
+
     public var title: String {
         switch self {
         case .offline: return "No Internet Connection"
@@ -206,9 +222,17 @@ public enum TestFailure: Sendable, Equatable {
     public var message: String {
         switch self {
         case .offline:
+            #if os(iOS)
             return "Connect to Wi-Fi or cellular data to run a speed test."
+            #else
+            return "Connect to a network to run a speed test."
+            #endif
         case .dataNotAllowed:
+            #if os(iOS)
             return "This network won't carry the test. Check that cellular data is enabled for this app and that Low Data Mode is off."
+            #else
+            return "This network won't carry the test. Check that Low Data Mode is off for this network."
+            #endif
         case .unreachable:
             return "You're connected, but speed.cloudflare.com didn't respond. You may be behind a captive portal or on a network that blocks it."
         case .interrupted:
@@ -268,7 +292,8 @@ public struct NetworkQuality: Sendable, Equatable {
     /// - Parameters:
     ///   - download: p90 download bandwidth in Mbps.
     ///   - latencyMs: unloaded (idle) latency.
-    ///   - jitterMs: unloaded (idle) jitter.
+    ///   - jitterMs: unloaded (idle) jitter. `nil` (fewer than two idle
+    ///     samples) also makes the score unavailable.
     ///   - loadedLatencyIncreaseMs: max(loaded download latency, loaded upload latency) − unloaded latency.
     ///     `nil` when the loaded-latency probes returned nothing, which makes
     ///     the whole score unavailable — see below.
@@ -276,16 +301,16 @@ public struct NetworkQuality: Sendable, Equatable {
     ///     loss (it needs a TURN server), so callers pass 0, which is also
     ///     what Cloudflare's JS engine falls back to.
     ///
-    /// Returns nil when the loaded-latency increase wasn't measured. All
-    /// three experiences weight it, and in these tables lower is better, so
-    /// substituting 0 would score a missing measurement as ideal.
+    /// Returns nil when the loaded-latency increase or jitter wasn't
+    /// measured. In these tables lower is better, so substituting 0 would
+    /// score a missing measurement as ideal.
     ///
     /// Note: none of Cloudflare's three published experiences (streaming,
     /// gaming, rtc) factor in upload bandwidth at all — only download does,
     /// and only for streaming. That's their real scoring table, not an
     /// omission here.
-    public init?(download: Double, latencyMs: Double, jitterMs: Double, loadedLatencyIncreaseMs: Double?, packetLoss: Double = 0) {
-        guard let loadedLatencyIncreaseMs else { return nil }
+    public init?(download: Double, latencyMs: Double, jitterMs: Double?, loadedLatencyIncreaseMs: Double?, packetLoss: Double = 0) {
+        guard let loadedLatencyIncreaseMs, let jitterMs else { return nil }
         let packetLossScore = scaleThreshold([0.01, 0.05, 0.25, 0.5], [10, 5, 0, -10, -20])(packetLoss)
         let latencyScore = scaleThreshold([10, 20, 50, 100, 500], [20, 10, 5, 0, -10, -20])(latencyMs)
         let loadedLatencyIncreaseScore = scaleThreshold([10, 20, 50, 100, 500], [20, 10, 5, 0, -10, -20])(loadedLatencyIncreaseMs)
@@ -315,6 +340,8 @@ public struct NetworkQuality: Sendable, Equatable {
 
 /// Everything a completed run measured.
 public struct TestResult: Sendable, Equatable {
+    /// When the run finished.
+    public var date: Date
     public var meta: NetworkMeta
     public var idleLatency: LatencySummary
     public var download: ThroughputSummary
@@ -327,7 +354,11 @@ public struct TestResult: Sendable, Equatable {
     /// hides the quality card rather than showing a grade we can't justify.
     public var quality: NetworkQuality?
 
-    public init(meta: NetworkMeta, idleLatency: LatencySummary, download: ThroughputSummary, downloadLoadedLatency: LatencySummary?, upload: ThroughputSummary, uploadLoadedLatency: LatencySummary?) {
+    /// Every byte the download and upload phases moved, ramp-up included.
+    public var bytesTransferred: UInt64 { download.bytes &+ upload.bytes }
+
+    public init(date: Date = .now, meta: NetworkMeta, idleLatency: LatencySummary, download: ThroughputSummary, downloadLoadedLatency: LatencySummary?, upload: ThroughputSummary, uploadLoadedLatency: LatencySummary?) {
+        self.date = date
         self.meta = meta
         self.idleLatency = idleLatency
         self.download = download

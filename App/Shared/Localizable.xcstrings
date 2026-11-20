@@ -1,0 +1,108 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "90th percentile" : {
+
+    },
+    "A full test moves as much data as this link can carry for about 16 seconds — up to around 1 GB each way on a very fast connection, far less at typical cellular speeds." : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Clear All" : {
+
+    },
+    "Connection" : {
+
+    },
+    "Date" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete All" : {
+
+    },
+    "Delete all %lld results?" : {
+
+    },
+    "Done" : {
+
+    },
+    "Edge Speed" : {
+
+    },
+    "Edge Speed is an independent app. It isn't affiliated with or endorsed by Cloudflare. Tests run against speed.cloudflare.com, which receives your IP address and the measurements." : {
+
+    },
+    "Export" : {
+
+    },
+    "Hides the address" : {
+
+    },
+    "History" : {
+
+    },
+    "Jitter" : {
+
+    },
+    "Measurements" : {
+
+    },
+    "Network" : {
+
+    },
+    "No Results Yet" : {
+
+    },
+    "Not affiliated with Cloudflare" : {
+
+    },
+    "Not measured" : {
+
+    },
+    "Only your latest %lld results are kept. Older ones are removed automatically." : {
+
+    },
+    "Options" : {
+
+    },
+    "Privacy Policy" : {
+
+    },
+    "Privacy policy: %@" : {
+
+    },
+    "Result" : {
+
+    },
+    "Run a speed test to see your history here." : {
+
+    },
+    "Shows the address" : {
+
+    },
+    "Start Test" : {
+
+    },
+    "Start Tests Automatically" : {
+
+    },
+    "This can't be undone." : {
+
+    },
+    "This network may be metered" : {
+
+    },
+    "Warn on Metered Networks" : {
+
+    },
+    "Your IP" : {
+
+    }
+  },
+  "version" : "1.0"
+}

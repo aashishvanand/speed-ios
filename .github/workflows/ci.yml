@@ -1,11 +1,15 @@
 name: CI
 
-# Pull requests only: pushes to dev don't run CI, and releases are built by
-# Xcode Cloud from the testflight branch (see ci_scripts/). Run it by hand
-# from the Actions tab when needed.
+# Manual only. This repo is private, so macOS runner minutes come out of the
+# monthly Actions allowance at 10x the Linux rate. Releases are built by Xcode
+# Cloud from the testflight branch (see ci_scripts/). Run this by hand from
+# the Actions tab when you want a full check across all platforms.
 on:
-  pull_request:
   workflow_dispatch:
+
+# Read the code, nothing else.
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -16,7 +20,7 @@ jobs:
     name: CFSpeedKit tests
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Run unit tests
         working-directory: Packages/CFSpeedKit
         # The live integration test skips itself unless CF_SPEEDTEST_LIVE=1,
@@ -35,7 +39,7 @@ jobs:
           - platform: tvOS
             device: Apple TV
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Run unit tests
         working-directory: Packages/CFSpeedKit
         # Use whichever matching simulator the runner image ships rather than
@@ -48,6 +52,10 @@ jobs:
           ids = [d["udid"] for k, v in sorted(devs.items(), reverse=True) if f".{rt}-" in k
                  for d in v if d["name"].startswith("${{ matrix.device }}")]
           print(ids[0])')
+          # Boot first: a simulator still booting freezes the first seconds of
+          # the test run and trips the timing assertions.
+          xcrun simctl boot "$id" || true
+          xcrun simctl bootstatus "$id" -b
           xcodebuild test \
             -scheme CFSpeedKit \
             -destination "platform=${{ matrix.platform }} Simulator,id=$id"
@@ -66,11 +74,10 @@ jobs:
           - scheme: CFSpeed-macOS
             destination: platform=macOS
     steps:
-      - uses: actions/checkout@v4
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Generate project
-        run: xcodegen generate
+        # The same pinned, checksum-verified XcodeGen that Xcode Cloud uses.
+        run: sh ci_scripts/ci_post_clone.sh
       - name: Build
         run: |
           xcodebuild build \
