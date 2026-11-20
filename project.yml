@@ -7,6 +7,17 @@ options:
     macOS: "26.0"
   createIntermediateGroups: true
 
+# One place to bump the version for all three apps. The Info.plists read
+# these through build settings, so XcodeGen regenerating them can't reset it.
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # The app is English-only today; the String Catalog is the
+    # localization hook for when a second language is added.
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+
 packages:
   CFSpeedKit:
     path: Packages/CFSpeedKit
@@ -18,11 +29,15 @@ targets:
     sources:
       - path: App/CFSpeed
       - path: App/Shared
+      - path: App/Shared/Localizable.xcstrings
+        buildPhase: resources
     info:
       path: App/CFSpeed/Info.plist
       properties:
         UILaunchScreen: {}
         ITSAppUsesNonExemptEncryption: false
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
@@ -51,11 +66,15 @@ targets:
     sources:
       - path: App/CFSpeed-tvOS
       - path: App/Shared
+      - path: App/Shared/Localizable.xcstrings
+        buildPhase: resources
     info:
       path: App/CFSpeed-tvOS/Info.plist
       properties:
         UILaunchScreen: {}
         ITSAppUsesNonExemptEncryption: false
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
     settings:
       base:
         PRODUCT_NAME: Edge Speed
@@ -74,10 +93,14 @@ targets:
     sources:
       - path: App/CFSpeed-macOS
       - path: App/Shared
+      - path: App/Shared/Localizable.xcstrings
+        buildPhase: resources
     info:
       path: App/CFSpeed-macOS/Info.plist
       properties:
         ITSAppUsesNonExemptEncryption: false
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.utilities
     entitlements:
       path: App/CFSpeed-macOS/CFSpeed-macOS.entitlements
@@ -98,6 +121,38 @@ targets:
     dependencies:
       - package: CFSpeedKit
 
+  CFSpeedUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: AppUITests/iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: 6.0
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 3MQ39BXGKV
+        TEST_TARGET_NAME: CFSpeed
+    dependencies:
+      - target: CFSpeed
+
+  CFSpeedTVUITests:
+    type: bundle.ui-testing
+    platform: tvOS
+    sources:
+      - path: AppUITests/tvOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.aashishvanand.speed.tvuitests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: 6.0
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 3MQ39BXGKV
+        TEST_TARGET_NAME: CFSpeed-tvOS
+    dependencies:
+      - target: CFSpeed-tvOS
+
 schemes:
   CFSpeed:
     build:
@@ -105,12 +160,20 @@ schemes:
         CFSpeed: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - CFSpeedUITests
   CFSpeed-tvOS:
     build:
       targets:
         CFSpeed-tvOS: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - CFSpeedTVUITests
   CFSpeed-macOS:
     build:
       targets:

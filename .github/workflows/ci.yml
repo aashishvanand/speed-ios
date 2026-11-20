@@ -7,6 +7,10 @@ name: CI
 on:
   workflow_dispatch:
 
+# Read the code, nothing else.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -16,7 +20,7 @@ jobs:
     name: CFSpeedKit tests
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Run unit tests
         working-directory: Packages/CFSpeedKit
         # The live integration test skips itself unless CF_SPEEDTEST_LIVE=1,
@@ -35,7 +39,7 @@ jobs:
           - platform: tvOS
             device: Apple TV
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Run unit tests
         working-directory: Packages/CFSpeedKit
         # Use whichever matching simulator the runner image ships rather than
@@ -70,11 +74,10 @@ jobs:
           - scheme: CFSpeed-macOS
             destination: platform=macOS
     steps:
-      - uses: actions/checkout@v4
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Generate project
-        run: xcodegen generate
+        # The same pinned, checksum-verified XcodeGen that Xcode Cloud uses.
+        run: sh ci_scripts/ci_post_clone.sh
       - name: Build
         run: |
           xcodebuild build \

@@ -79,6 +79,8 @@ struct TransferOutcome: Sendable {
     var response: HTTPURLResponse?
     /// Upload body bytes this request added to the counter.
     var bytesSent: UInt64
+    /// Download body bytes this request added to the counter.
+    var bytesReceived: UInt64 = 0
 
     var rejectedStatus: Int? {
         guard let response, !response.isSuccess else { return nil }
@@ -120,6 +122,7 @@ final class TransferDelegate: NSObject, URLSessionDataDelegate, Sendable {
         var response: HTTPURLResponse?
         var lastReportedSent: Int64 = 0
         var bytesSent: UInt64 = 0
+        var bytesReceived: UInt64 = 0
         var discarded = 0
         var rejected = false
         var finished = false
@@ -159,6 +162,7 @@ final class TransferDelegate: NSObject, URLSessionDataDelegate, Sendable {
         switch direction {
         case .download:
             counter.add(UInt64(data.count))
+            state.withLockUnchecked { $0.bytesReceived += UInt64(data.count) }
         case .upload:
             let overLimit = state.withLockUnchecked { state -> Bool in
                 state.discarded += data.count
@@ -192,7 +196,7 @@ final class TransferDelegate: NSObject, URLSessionDataDelegate, Sendable {
                 counter.add(missing)
             }
             defer { state.continuation = nil }
-            return (state.continuation, TransferOutcome(response: state.response, bytesSent: state.bytesSent), state.rejected)
+            return (state.continuation, TransferOutcome(response: state.response, bytesSent: state.bytesSent, bytesReceived: state.bytesReceived), state.rejected)
         }
         // Our own `.cancel` of a rejected response surfaces as a cancellation
         // error; report the status instead so the worker can count it.

@@ -86,15 +86,21 @@ final class CloudflareClient: Sendable {
         let deadline = ContinuousClock.now + .seconds(Self.metadataTimeout)
         let limit = Self.maxMetadataBytes
         let result = try? await withDeadline(deadline) { [session, request] () async throws -> Data? in
-            let (bytes, response) = try await session.bytes(for: request)
-            guard let http = response as? HTTPURLResponse, http.isSuccess,
-                  http.expectedContentLength <= Int64(limit) else { return nil }
-            var data = Data()
-            for try await byte in bytes {
-                data.append(byte)
-                if data.count > limit { return nil }
+            // A data task with a capping delegate, not `bytes(for:)`: AsyncBytes
+            // resumes once per byte, which for tens of KB of /locations means
+            // tens of thousands of hops on the cooperative pool while the idle
+            // latency probes are being timed. See `TransferDelegate`.
+            let task = session.dataTask(with: request)
+            let delegate = CappedBodyDelegate(limit: limit)
+            task.delegate = delegate
+            return try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    delegate.attach(continuation)
+                    task.resume()
+                }
+            } onCancel: {
+                task.cancel()
             }
-            return data
         }
         return result ?? nil
     }
@@ -226,6 +232,63 @@ final class CloudflareClient: Sendable {
             latitude: response.colo?.lat,
             longitude: response.colo?.lon
         )
+    }
+}
+
+/// Collects one small response body in memory, up to `limit` bytes. Resumes
+/// with nil, and stops reading, on a non-2xx status or a body over the limit.
+private final class CappedBodyDelegate: NSObject, URLSessionDataDelegate, Sendable {
+    private struct State {
+        var continuation: CheckedContinuation<Data?, Error>?
+        var data = Data()
+        var refused = false
+    }
+
+    private let limit: Int
+    private let state = OSAllocatedUnfairLock<State>(uncheckedState: State())
+
+    init(limit: Int) {
+        self.limit = limit
+    }
+
+    /// Called before `resume()`, so it always runs ahead of any callback.
+    func attach(_ continuation: CheckedContinuation<Data?, Error>) {
+        state.withLockUnchecked { $0.continuation = continuation }
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void) {
+        let ok = (response as? HTTPURLResponse)?.isSuccess == true && response.expectedContentLength <= Int64(limit)
+        if !ok { state.withLockUnchecked { $0.refused = true } }
+        completionHandler(ok ? .allow : .cancel)
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        let overLimit = state.withLockUnchecked { state -> Bool in
+            state.data.append(data)
+            if state.data.count > limit {
+                state.refused = true
+                state.data = Data()
+                return true
+            }
+            return false
+        }
+        if overLimit { dataTask.cancel() }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let (continuation, data, refused) = state.withLockUnchecked { state in
+            defer { state.continuation = nil }
+            return (state.continuation, state.data, state.refused)
+        }
+        // Our own cancel of a refused response surfaces as an error; that's
+        // a plain "no metadata", not a failure.
+        if refused {
+            continuation?.resume(returning: nil)
+        } else if let error {
+            continuation?.resume(throwing: error)
+        } else {
+            continuation?.resume(returning: data)
+        }
     }
 }
 
