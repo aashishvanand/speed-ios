@@ -9,9 +9,11 @@
 /* Begin PBXBuildFile section */
 		0AA8ADB0DE1488A4BC95A3D3 /* SpeedTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */; };
 		12CCCBA06EA027E130E242AE /* CFSpeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = FB346F0184A5A61E1480AF22 /* CFSpeedKit */; };
+		1452A6DA94F58DEC5C275320 /* AccessibilityLabelValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB20B4E47182E4783A58B3E /* AccessibilityLabelValue.swift */; };
 		1E0616A8C8A70D8EEEB86E85 /* CFSpeedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A87AC335335B3914131F477 /* CFSpeedApp.swift */; };
 		1FA22B751853E3757ECD1826 /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */; };
 		20FFD63FFB2976F34CEA02FC /* CFSpeedMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E026518FDF4FE13AAAE70683 /* CFSpeedMacApp.swift */; };
+		25075CD3AD750E6C26ABE914 /* QualityGradeColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406DB2AE2F095D7584CCCD9D /* QualityGradeColor.swift */; };
 		29125D3F6FCB9B1178F05F05 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1FFD35E5744D7122C59A7F /* HistoryView.swift */; };
 		2F906D6242579D1EF5DEFF95 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1FFD35E5744D7122C59A7F /* HistoryView.swift */; };
 		3D471BDAA32BDD1D99FD6202 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BABDF3F25A4304578C12C203 /* Assets.xcassets */; };
@@ -22,16 +24,21 @@
 		6689D3A2F86888A184CD93E3 /* TVRemoteUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55B2EF32E2D249AC5C6DD425 /* TVRemoteUITests.swift */; };
 		67FD2E4B825B9DE97DC77BC7 /* ScreenshotDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */; };
 		71C9E82DBC8953658F69CE24 /* CFSpeedTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16F890A89FF77612EC5B021C /* CFSpeedTVApp.swift */; };
+		7935C45903B2E09F409E34C0 /* QualityGradeColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406DB2AE2F095D7584CCCD9D /* QualityGradeColor.swift */; };
 		80F0A850A39F8E179566AE0E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 943537C74065BB776F0A445E /* Assets.xcassets */; };
 		8C1F37F28FDEF5F3FD0BD50B /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E89D71A8D9EF678DFC6ABDD7 /* Localizable.xcstrings */; };
 		8EA3734E4E8CB97CE28D1A55 /* AccessibilityUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32B0C2B7CF307C78F4CEEAC8 /* AccessibilityUITests.swift */; };
 		8F2A74EF8A112F85F1707571 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E89D71A8D9EF678DFC6ABDD7 /* Localizable.xcstrings */; };
+		9280AD187F1BEFD82845BA19 /* AccessibilityLabelValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB20B4E47182E4783A58B3E /* AccessibilityLabelValue.swift */; };
 		943784BBAF394FE8644921B7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 07B0916C1D8D1DF996C79618 /* Assets.xcassets */; };
+		9F3244806AB6201CB48EECE8 /* MacAccessibilityUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27B8455CD989B3260275BEE0 /* MacAccessibilityUITests.swift */; };
 		A73343BD48391F4326F54B8D /* CFSpeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3F9CBD908118ACF1AF9CA51A /* CFSpeedKit */; };
 		B6AFEC092A84371CC77A6890 /* CFSpeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8DBE1112C131A97A8DEB1DC3 /* CFSpeedKit */; };
 		B8A4273AA977DE11983082B3 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1FFD35E5744D7122C59A7F /* HistoryView.swift */; };
+		C7DDDC379A36C7927A10C3D8 /* AccessibilityLabelValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB20B4E47182E4783A58B3E /* AccessibilityLabelValue.swift */; };
 		C7F24DF74C4E61223A2452B2 /* SpeedTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */; };
 		D252469FBECFDFF37392CA72 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E89D71A8D9EF678DFC6ABDD7 /* Localizable.xcstrings */; };
+		F0E998B29578D7DDAABAA15E /* QualityGradeColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406DB2AE2F095D7584CCCD9D /* QualityGradeColor.swift */; };
 		F6C923267C418375F2ECBABA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -50,6 +57,13 @@
 			remoteGlobalIDString = 35B48491C241D42416094C35;
 			remoteInfo = "CFSpeed-tvOS";
 		};
+		CB1DCE0DF735C5C675DEA889 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2D6B9E312C7B3DA262F35D32 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9D308B4FAB5B3861BDF3AF84;
+			remoteInfo = "CFSpeed-macOS";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -59,8 +73,10 @@
 		18B8EECA55D20E0C43A3ED58 /* CFSpeedUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CFSpeedUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1C405416EA9DD371F472B37A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1C656CA4196B470CD413AADD /* CFSpeed-tvOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "CFSpeed-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		27B8455CD989B3260275BEE0 /* MacAccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAccessibilityUITests.swift; sourceTree = "<group>"; };
 		28D35E584CC6643465F4DDA1 /* CFSpeedKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = CFSpeedKit; path = Packages/CFSpeedKit; sourceTree = SOURCE_ROOT; };
 		32B0C2B7CF307C78F4CEEAC8 /* AccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityUITests.swift; sourceTree = "<group>"; };
+		406DB2AE2F095D7584CCCD9D /* QualityGradeColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QualityGradeColor.swift; sourceTree = "<group>"; };
 		50E4D374039158F450537E85 /* CFSpeed-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "CFSpeed-macOS.entitlements"; sourceTree = "<group>"; };
 		55B2EF32E2D249AC5C6DD425 /* TVRemoteUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVRemoteUITests.swift; sourceTree = "<group>"; };
 		7400C5141C96C7A553205A18 /* CFSpeedTVUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CFSpeedTVUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -70,7 +86,9 @@
 		8F0762BC35DC4F68E1BE1108 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		943537C74065BB776F0A445E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		98845D449B405E1ACC6B5CC3 /* CFSpeed-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CFSpeed-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A11B70392B6A053CBF89D0FF /* CFSpeedMacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CFSpeedMacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC8251B1B43826A0A5A0C733 /* CFSpeed.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CFSpeed.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BAB20B4E47182E4783A58B3E /* AccessibilityLabelValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityLabelValue.swift; sourceTree = "<group>"; };
 		BABDF3F25A4304578C12C203 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedTestView.swift; sourceTree = "<group>"; };
 		DF22289D611ABA80D7A010AE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -138,9 +156,11 @@
 		70A2D5C3A8AC114BAEE43D0A /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				BAB20B4E47182E4783A58B3E /* AccessibilityLabelValue.swift */,
 				7B1FFD35E5744D7122C59A7F /* HistoryView.swift */,
 				E89D71A8D9EF678DFC6ABDD7 /* Localizable.xcstrings */,
 				119BCEE0214E631CFD7BEF8F /* PrivacyInfo.xcprivacy */,
+				406DB2AE2F095D7584CCCD9D /* QualityGradeColor.swift */,
 				821B4EEAE2E7A3D68B7E33D7 /* ScreenshotDemo.swift */,
 				C9ECE49A4E282D490465D5F9 /* SpeedTestView.swift */,
 			);
@@ -159,6 +179,7 @@
 			isa = PBXGroup;
 			children = (
 				A5B61A7D60C43829C533C177 /* iOS */,
+				D98BCEDC7852E77ED031B442 /* macOS */,
 				25F59F2EF19ADC82DB79340F /* tvOS */,
 			);
 			path = AppUITests;
@@ -192,6 +213,14 @@
 			path = "CFSpeed-tvOS";
 			sourceTree = "<group>";
 		};
+		D98BCEDC7852E77ED031B442 /* macOS */ = {
+			isa = PBXGroup;
+			children = (
+				27B8455CD989B3260275BEE0 /* MacAccessibilityUITests.swift */,
+			);
+			path = macOS;
+			sourceTree = "<group>";
+		};
 		E83D39E4D5BDA50E756DADDA /* CFSpeed-macOS */ = {
 			isa = PBXGroup;
 			children = (
@@ -209,6 +238,7 @@
 				98845D449B405E1ACC6B5CC3 /* CFSpeed-macOS.app */,
 				1C656CA4196B470CD413AADD /* CFSpeed-tvOS.app */,
 				AC8251B1B43826A0A5A0C733 /* CFSpeed.app */,
+				A11B70392B6A053CBF89D0FF /* CFSpeedMacUITests.xctest */,
 				7400C5141C96C7A553205A18 /* CFSpeedTVUITests.xctest */,
 				18B8EECA55D20E0C43A3ED58 /* CFSpeedUITests.xctest */,
 			);
@@ -314,6 +344,24 @@
 			productReference = 98845D449B405E1ACC6B5CC3 /* CFSpeed-macOS.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F44C8C40FB803101BCB267FB /* CFSpeedMacUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4225C7C40A28AA2B704966FE /* Build configuration list for PBXNativeTarget "CFSpeedMacUITests" */;
+			buildPhases = (
+				D033F0FD5E2BD57D0633FA30 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8B00CA3688B2BC5CFEFCEE2C /* PBXTargetDependency */,
+			);
+			name = CFSpeedMacUITests;
+			packageProductDependencies = (
+			);
+			productName = CFSpeedMacUITests;
+			productReference = A11B70392B6A053CBF89D0FF /* CFSpeedMacUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -345,6 +393,11 @@
 						DevelopmentTeam = 3MQ39BXGKV;
 						ProvisioningStyle = Automatic;
 					};
+					F44C8C40FB803101BCB267FB = {
+						DevelopmentTeam = 3MQ39BXGKV;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 9D308B4FAB5B3861BDF3AF84;
+					};
 				};
 			};
 			buildConfigurationList = 71B6731C4407734B7B5795B0 /* Build configuration list for PBXProject "CFSpeed" */;
@@ -369,6 +422,7 @@
 				9D308B4FAB5B3861BDF3AF84 /* CFSpeed-macOS */,
 				02CAABF00B63EF47E212EA5F /* CFSpeedUITests */,
 				4C1E2B062809BCFF66EE9D9A /* CFSpeedTVUITests */,
+				F44C8C40FB803101BCB267FB /* CFSpeedMacUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -419,8 +473,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C7DDDC379A36C7927A10C3D8 /* AccessibilityLabelValue.swift in Sources */,
 				71C9E82DBC8953658F69CE24 /* CFSpeedTVApp.swift in Sources */,
 				B8A4273AA977DE11983082B3 /* HistoryView.swift in Sources */,
+				F0E998B29578D7DDAABAA15E /* QualityGradeColor.swift in Sources */,
 				67FD2E4B825B9DE97DC77BC7 /* ScreenshotDemo.swift in Sources */,
 				0AA8ADB0DE1488A4BC95A3D3 /* SpeedTestView.swift in Sources */,
 			);
@@ -430,8 +486,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9280AD187F1BEFD82845BA19 /* AccessibilityLabelValue.swift in Sources */,
 				20FFD63FFB2976F34CEA02FC /* CFSpeedMacApp.swift in Sources */,
 				2F906D6242579D1EF5DEFF95 /* HistoryView.swift in Sources */,
+				7935C45903B2E09F409E34C0 /* QualityGradeColor.swift in Sources */,
 				1FA22B751853E3757ECD1826 /* ScreenshotDemo.swift in Sources */,
 				52261CA1C2495ABE300EE30D /* SpeedTestView.swift in Sources */,
 			);
@@ -449,10 +507,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1452A6DA94F58DEC5C275320 /* AccessibilityLabelValue.swift in Sources */,
 				1E0616A8C8A70D8EEEB86E85 /* CFSpeedApp.swift in Sources */,
 				29125D3F6FCB9B1178F05F05 /* HistoryView.swift in Sources */,
+				25075CD3AD750E6C26ABE914 /* QualityGradeColor.swift in Sources */,
 				60516832D35C2F433EA542E2 /* ScreenshotDemo.swift in Sources */,
 				C7F24DF74C4E61223A2452B2 /* SpeedTestView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D033F0FD5E2BD57D0633FA30 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9F3244806AB6201CB48EECE8 /* MacAccessibilityUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -469,9 +537,54 @@
 			target = 35B48491C241D42416094C35 /* CFSpeed-tvOS */;
 			targetProxy = C28C4DD032F1B10C1B1E09DC /* PBXContainerItemProxy */;
 		};
+		8B00CA3688B2BC5CFEFCEE2C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9D308B4FAB5B3861BDF3AF84 /* CFSpeed-macOS */;
+			targetProxy = CB1DCE0DF735C5C675DEA889 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		283CF1E2EA5119CAE4A4DF3F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed.macuitests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_TARGET_NAME = "CFSpeed-macOS";
+			};
+			name = Debug;
+		};
+		2F246FFC1B6BDB7B6207ED20 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 3MQ39BXGKV;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = me.aashishvanand.speed.macuitests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_TARGET_NAME = "CFSpeed-macOS";
+			};
+			name = Release;
+		};
 		3E1074EDE7DA258169CC026E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -546,7 +659,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -756,7 +869,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -814,6 +927,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		4225C7C40A28AA2B704966FE /* Build configuration list for PBXNativeTarget "CFSpeedMacUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				283CF1E2EA5119CAE4A4DF3F /* Debug */,
+				2F246FFC1B6BDB7B6207ED20 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		5A8E83428EDD74358B2BD34F /* Build configuration list for PBXNativeTarget "CFSpeed" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

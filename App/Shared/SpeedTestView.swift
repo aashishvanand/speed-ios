@@ -9,6 +9,7 @@ struct SpeedTestView: View {
     @State private var runner = SpeedTestRunner()
     @State private var connectivity = ConnectivityMonitor()
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -379,23 +380,9 @@ struct SpeedTestView: View {
         } value: {
             Text(grade.rawValue)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(gradeColor(grade))
+                .foregroundStyle(grade.textColor(scheme: colorScheme, contrast: colorSchemeContrast))
         }
         .accessibilityElement(children: .combine)
-    }
-
-    /// The system colors are tuned for dark backgrounds; yellow and orange
-    /// text on light glass falls well under 4.5:1. In light mode use darker
-    /// shades that clear it on white, and keep the system colors in dark.
-    private func gradeColor(_ grade: QualityGrade) -> Color {
-        let light = colorScheme == .light
-        switch grade {
-        case .great: return light ? Color(red: 0.11, green: 0.48, blue: 0.20) : .green
-        case .good: return light ? Color(red: 0.00, green: 0.35, blue: 0.72) : .blue
-        case .average: return light ? Color(red: 0.55, green: 0.40, blue: 0.00) : .yellow
-        case .poor: return light ? Color(red: 0.70, green: 0.28, blue: 0.00) : .orange
-        case .bad: return light ? Color(red: 0.75, green: 0.10, blue: 0.10) : .red
-        }
     }
 
     // MARK: - Server location
@@ -702,8 +689,7 @@ private struct HeroCard: View {
         .glassEffect(.regular, in: .rect(cornerRadius: 32))
         // One element: "Download, 412 Mbps", not five fragments.
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabelText)
-        .accessibilityValue(accessibilityValueText)
+        .accessibilityLabelAndValue(accessibilityLabelText, accessibilityValueText)
         .accessibilityAddTraits(.updatesFrequently)
     }
 
@@ -867,8 +853,7 @@ private struct SecondaryStatsRow: View {
         .frame(maxWidth: .infinity)
         .glassEffect(.regular, in: .rect(cornerRadius: 20))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label)
-        .accessibilityValue(value == Self.pending ? "Pending" : value)
+        .accessibilityLabelAndValue(label, value == Self.pending ? "Pending" : value)
     }
 }
 

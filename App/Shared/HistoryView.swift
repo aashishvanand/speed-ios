@@ -232,8 +232,7 @@ struct HistoryView: View {
         .fixedSize(horizontal: fixed, vertical: fixed)
         // The icon alone means nothing to VoiceOver: "Download, 100 Mbps".
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(name)
-        .accessibilityValue(value)
+        .accessibilityLabelAndValue(name, value)
     }
 
     private func connectionIcon(_ type: ConnectionType) -> String {

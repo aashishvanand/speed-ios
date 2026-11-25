@@ -125,17 +125,20 @@ It's skipped unless you opt in:
 CF_SPEEDTEST_LIVE=1 swift test --filter SpeedTestRunnerIntegrationTests
 ```
 
-UI tests (from the `CFSpeedUITests` / `CFSpeedTVUITests` targets) cover the
-accessibility tree, landscape, Dynamic Type, swipe-to-delete, and — with the
-simulated remote — tvOS focus scrolling and the long-press delete menu. They
-run in the Debug demo scenes, so they too send no network traffic. Run them
-locally against a booted simulator:
+UI tests (from the `CFSpeedUITests` / `CFSpeedTVUITests` / `CFSpeedMacUITests`
+targets) cover the accessibility tree, landscape, Dynamic Type,
+swipe-to-delete, and — with the simulated remote — tvOS focus scrolling and the
+long-press delete menu, plus the same accessibility tree and History sheet on
+the Mac. They run in the Debug demo scenes, so they too send no network
+traffic. Run them locally against a booted simulator (and the Mac):
 
 ```bash
 xcodebuild test -project CFSpeed.xcodeproj -scheme CFSpeed \
   -destination 'platform=iOS Simulator,name=iPhone 17e'
 xcodebuild test -project CFSpeed.xcodeproj -scheme CFSpeed-tvOS \
   -destination 'platform=tvOS Simulator,name=Apple TV 4K (4th generation)'
+xcodebuild test -project CFSpeed.xcodeproj -scheme CFSpeed-macOS \
+  -destination 'platform=macOS'
 ```
 
 Xcode Cloud runs the engine tests before every release archive
@@ -175,7 +178,8 @@ generates `CFSpeed.xcodeproj` before it builds, with a pinned XcodeGen release
 whose SHA-256 is checked before it runs. The GitHub workflow uses the same script.
 
 The version and build number for all three apps are `MARKETING_VERSION` and
-`CURRENT_PROJECT_VERSION` in `project.yml`.
+`CURRENT_PROJECT_VERSION` in `project.yml`. Raise the build number for each
+TestFlight upload and add an entry to [CHANGELOG.md](CHANGELOG.md).
 
 ## Privacy
 
